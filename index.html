@@ -128,6 +128,10 @@
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
   .field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px;}
+  .goal-readonly{
+    background:var(--card-2);border:1px solid var(--border);border-radius:8px;
+    padding:7px 10px;font-size:.85rem;color:var(--text);
+  }
   @media(max-width:560px){.grid-2,.grid-3{grid-template-columns:1fr;}}
 
   .week-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
@@ -231,6 +235,7 @@
           <div class="field">
             <label for="weekGoal" data-i18n="goal_label"></label>
             <input type="text" inputmode="decimal" id="weekGoal" data-i18n-placeholder="goal_placeholder">
+            <div class="goal-readonly" id="goalReadonly" style="display:none;"></div>
           </div>
         </div>
         <div class="trips-list" id="tripsList"></div>
@@ -384,6 +389,7 @@ const STRINGS = {
     trips_sub: "Dine løbeture for ugen, hentet fra Strava. Brug pilene til at se andre uger.",
     week_nav_today: "I dag",
     goal_label: "Mål for ugen (km)", goal_placeholder: "fx 15",
+    goal_not_set: "intet mål sat",
     trips_empty: "Ingen ture denne uge — forbind Strava under Indstillinger.",
     trip_delete_title: "Slet tur",
     trip_delete_confirm: "Slet turen ({label})?",
@@ -445,6 +451,7 @@ const STRINGS = {
     trips_sub: "Your runs for the week, fetched from Strava. Use the arrows to view other weeks.",
     week_nav_today: "Today",
     goal_label: "Goal for the week (km)", goal_placeholder: "e.g. 15",
+    goal_not_set: "no goal set",
     trips_empty: "No runs this week — connect Strava under Settings.",
     trip_delete_title: "Delete run",
     trip_delete_confirm: "Delete the run ({label})?",
@@ -723,7 +730,22 @@ function renderTrips(){
     `${formatDate(viewedWeekStart)} – ${formatDate(end)}`;
 
   const week = viewedWeek();
-  document.getElementById("weekGoal").value = week.goal ?? "";
+  const goalInput = document.getElementById("weekGoal");
+  const goalReadonly = document.getElementById("goalReadonly");
+  const isPast = viewedWeekStart < CURRENT_WEEK_START;
+  if(isPast){
+    const total = week.trips.reduce((sum, tr) => sum + (parseDecimal(tripValue(tr)) || 0), 0);
+    const goalVal = parseDecimal(week.goal);
+    goalReadonly.textContent = goalVal !== null
+      ? `${total.toFixed(2)} / ${goalVal.toFixed(2)} km`
+      : `${total.toFixed(2)} km (${t("goal_not_set")})`;
+    goalInput.style.display = "none";
+    goalReadonly.style.display = "";
+  } else {
+    goalInput.value = week.goal ?? "";
+    goalInput.style.display = "";
+    goalReadonly.style.display = "none";
+  }
   const list = document.getElementById("tripsList");
   list.innerHTML = "";
 
