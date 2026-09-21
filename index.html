@@ -252,6 +252,18 @@
     </div>
   </div>
 
+  <!-- Strava -->
+  <div class="card">
+    <h2>🔗 Strava</h2>
+    <p class="sub">Forbind din Strava-konto, så dine løbeture automatisk hentes ind i "Ugens ture" i stedet for at blive tastet manuelt.</p>
+    <div class="actions-row">
+      <button class="btn" id="stravaConnectBtn">Forbind til Strava</button>
+      <button class="btn secondary small" id="stravaSyncBtn" style="display:none;">🔄 Hent nye løbeture</button>
+      <button class="btn secondary small" id="stravaDisconnectBtn" style="display:none;">Afbryd forbindelse</button>
+    </div>
+    <p class="hint" id="stravaStatus"></p>
+  </div>
+
   <!-- 5. Data -->
   <div class="card">
     <h2>💾 Data</h2>
@@ -271,6 +283,10 @@
 const KM_PER_MILE = 1.609344;
 const STORAGE_KEY = "lobeokonomi-data-v1";
 const DEFAULT_TRIP_COUNT = 4;
+
+// --- Strava-integration: udfyld disse to efter opsætning (se worker/strava-worker.js) ---
+const STRAVA_CLIENT_ID = "REPLACE_ME";
+const STRAVA_WORKER_URL = "https://REPLACE_ME.workers.dev";
 
 function toDateStr(d){
   const yyyy = d.getFullYear();
@@ -336,6 +352,9 @@ function loadData(){
       else break;
     }
   });
+  if(!data.strava){
+    data.strava = {accessToken:null, refreshToken:null, expiresAt:null, athleteName:null, importedIds:[]};
+  }
   return data;
 }
 let data = loadData();
@@ -694,6 +713,159 @@ paceMileField.addEventListener("input", () => {
   paceKmField.value = v === null ? "" : formatMMSS(v / KM_PER_MILE);
 });
 
+/* ---------- Strava ---------- */
+function stravaRedirectUri(){
+  return location.origin + location.pathname;
+}
+function stravaStatusMsg(msg){
+  document.getElementById("stravaStatus").textContent = msg;
+}
+function stravaConfigured(){
+  return STRAVA_CLIENT_ID !== "REPLACE_ME" && STRAVA_WORKER_URL.indexOf("REPLACE_ME") === -1;
+}
+function renderStravaStatus(){
+  const connected = !!data.strava.refreshToken;
+  document.getElementById("stravaConnectBtn").style.display = connected ? "none" : "";
+  document.getElementById("stravaSyncBtn").style.display = connected ? "" : "none";
+  document.getElementById("stravaDisconnectBtn").style.display = connected ? "" : "none";
+  if(!stravaConfigured()){
+    stravaStatusMsg("Strava-integrationen er endnu ikke sat op (mangler Client ID/Worker-URL).");
+  } else if(connected){
+    stravaStatusMsg("Forbundet til Strava" + (data.strava.athleteName ? ` som ${data.strava.athleteName}` : "") + ".");
+  } else {
+    stravaStatusMsg("");
+  }
+}
+
+document.getElementById("stravaConnectBtn").addEventListener("click", () => {
+  if(!stravaConfigured()){
+    stravaStatusMsg("Strava-integrationen er endnu ikke sat op (mangler Client ID/Worker-URL).");
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: STRAVA_CLIENT_ID,
+    redirect_uri: stravaRedirectUri(),
+    response_type: "code",
+    approval_prompt: "auto",
+    scope: "activity:read_all"
+  });
+  location.href = `https://www.strava.com/oauth/authorize?${params}`;
+});
+
+document.getElementById("stravaDisconnectBtn").addEventListener("click", () => {
+  if(!confirm("Afbryd forbindelsen til Strava? Allerede importerede ture bliver ikke slettet.")) return;
+  data.strava.accessToken = null;
+  data.strava.refreshToken = null;
+  data.strava.expiresAt = null;
+  data.strava.athleteName = null;
+  saveData();
+  renderStravaStatus();
+});
+
+document.getElementById("stravaSyncBtn").addEventListener("click", syncStravaRuns);
+
+async function handleStravaRedirect(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get("code");
+  const error = params.get("error");
+  if(!code && !error) return;
+  history.replaceState({}, "", stravaRedirectUri());
+  if(error){
+    stravaStatusMsg("Strava-login blev afbrudt.");
+    return;
+  }
+  if(!stravaConfigured()){
+    stravaStatusMsg("Strava-integrationen er endnu ikke sat op (mangler Client ID/Worker-URL).");
+    return;
+  }
+  try{
+    stravaStatusMsg("Forbinder til Strava...");
+    const res = await fetch(`${STRAVA_WORKER_URL}/exchange`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({code})
+    });
+    if(!res.ok) throw new Error(`serveren svarede ${res.status}`);
+    const tok = await res.json();
+    if(!tok.access_token) throw new Error(tok.message || "intet access token i svaret");
+    data.strava.accessToken = tok.access_token;
+    data.strava.refreshToken = tok.refresh_token;
+    data.strava.expiresAt = tok.expires_at;
+    data.strava.athleteName = tok.athlete ? `${tok.athlete.firstname} ${tok.athlete.lastname}` : null;
+    saveData();
+    renderStravaStatus();
+    await syncStravaRuns();
+  }catch(err){
+    stravaStatusMsg("Fejl ved Strava-login: " + err.message);
+  }
+}
+
+async function ensureStravaToken(){
+  if(!data.strava.refreshToken) return null;
+  const now = Math.floor(Date.now()/1000);
+  if(data.strava.accessToken && data.strava.expiresAt && data.strava.expiresAt > now + 60){
+    return data.strava.accessToken;
+  }
+  const res = await fetch(`${STRAVA_WORKER_URL}/refresh`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({refresh_token: data.strava.refreshToken})
+  });
+  if(!res.ok) throw new Error(`kunne ikke forny login (${res.status})`);
+  const tok = await res.json();
+  if(!tok.access_token) throw new Error(tok.message || "intet access token i svaret");
+  data.strava.accessToken = tok.access_token;
+  data.strava.refreshToken = tok.refresh_token;
+  data.strava.expiresAt = tok.expires_at;
+  saveData();
+  return data.strava.accessToken;
+}
+
+async function syncStravaRuns(){
+  if(!stravaConfigured()) return;
+  stravaStatusMsg("Henter løbeture fra Strava...");
+  try{
+    const token = await ensureStravaToken();
+    if(!token) throw new Error("ikke forbundet til Strava endnu");
+
+    const after = Math.floor(Date.now()/1000) - 90*24*3600; // seneste ~90 dage
+    let page = 1, allActivities = [];
+    while(true){
+      const res = await fetch(`${STRAVA_WORKER_URL}/activities?after=${after}&page=${page}&per_page=100`, {
+        headers: {"Authorization": `Bearer ${token}`}
+      });
+      if(!res.ok) throw new Error(`kunne ikke hente aktiviteter (${res.status})`);
+      const batch = await res.json();
+      allActivities = allActivities.concat(batch);
+      if(!Array.isArray(batch) || batch.length < 100) break;
+      page++;
+    }
+
+    const runs = allActivities.filter(a => a.type === "Run" || a.sport_type === "Run" || a.sport_type === "TrailRun");
+    let imported = 0;
+    runs.forEach(run => {
+      if(data.strava.importedIds.includes(run.id)) return;
+      const dateLocal = (run.start_date_local || run.start_date).slice(0,10);
+      const weekStart = toMonday(dateLocal);
+      const week = ensureWeek(weekStart);
+      const km = run.distance / 1000;
+      week.trips.push(km.toFixed(2));
+      data.strava.importedIds.push(run.id);
+      imported++;
+    });
+
+    saveData();
+    renderTrips();
+    refreshLogDerived();
+    renderStravaStatus();
+    stravaStatusMsg(imported > 0
+      ? `${imported} ny${imported === 1 ? "" : "e"} løbetur${imported === 1 ? "" : "e"} importeret fra Strava.`
+      : "Ingen nye løbeture at hente fra Strava.");
+  }catch(err){
+    stravaStatusMsg("Fejl: " + err.message);
+  }
+}
+
 /* ---------- 5. Data (eksport/import) ---------- */
 document.getElementById("exportBtn").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
@@ -738,6 +910,8 @@ document.getElementById("importFile").addEventListener("change", e => {
 /* ---------- init ---------- */
 renderLog();
 renderTrips();
+renderStravaStatus();
+handleStravaRedirect();
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", () => {
