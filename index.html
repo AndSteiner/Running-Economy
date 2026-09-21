@@ -310,6 +310,10 @@ function formatDaDate(dateStr){
   const [y,m,d] = dateStr.split("-");
   return `${d}/${m}/${y}`;
 }
+function formatShortDaDate(dateStr){
+  const [, m, d] = dateStr.split("-");
+  return `${d}/${m}`;
+}
 function parseDecimal(str){
   if(str === null || str === undefined) return null;
   const s = String(str).trim().replace(",", ".");
@@ -373,10 +377,19 @@ let viewedWeekStart = CURRENT_WEEK_START;
 function viewedWeek(){ return ensureWeek(viewedWeekStart); }
 
 /* ---------- 1. Ugentlig log ---------- */
+// En tur er enten: null (tom plads), en ren værdi (manuelt tastet), eller
+// {value, date} (importeret fra Strava, med dato for turen).
+function tripValue(t){
+  if(t === null || t === undefined) return null;
+  return (typeof t === "object") ? t.value : t;
+}
+function tripDate(t){
+  return (t && typeof t === "object") ? t.date : null;
+}
 function weekTripsTotal(weekStart){
   const w = data.tripsByWeek[weekStart];
   if(!w) return null;
-  const nums = w.trips.map(parseDecimal).filter(v => v !== null);
+  const nums = w.trips.map(t => parseDecimal(tripValue(t))).filter(v => v !== null);
   if(nums.length === 0) return null;
   return nums.reduce((s,v) => s+v, 0);
 }
@@ -506,7 +519,7 @@ function updateOverallStats(){
   });
   const avgIncrease = increases.length ? increases.reduce((s,v) => s+v, 0) / increases.length : null;
 
-  const allTrips = Object.values(data.tripsByWeek).flatMap(w => w.trips.map(parseDecimal)).filter(v => v !== null);
+  const allTrips = Object.values(data.tripsByWeek).flatMap(w => w.trips.map(t => parseDecimal(tripValue(t)))).filter(v => v !== null);
   const longestTrip = allTrips.length ? Math.max(...allTrips) : 0;
 
   document.getElementById("statWeeks").textContent = actuals.length;
@@ -541,9 +554,11 @@ function renderTrips(){
   week.trips.forEach((t, i) => {
     const row = document.createElement("div");
     row.className = "trip-row";
+    const date = tripDate(t);
+    const label = date ? formatShortDaDate(date) : `Tur ${i+1}`;
     row.innerHTML = `
-      <span>Tur ${i+1}</span>
-      <input type="text" inputmode="decimal" data-i="${i}" value="${t ?? ""}" placeholder="km">
+      <span title="${date ? formatDaDate(date) + " (Strava)" : ""}">${label}</span>
+      <input type="text" inputmode="decimal" data-i="${i}" value="${tripValue(t) ?? ""}" placeholder="km">
       <button class="icon-btn" data-del="${i}" title="Slet tur">✕</button>
     `;
     list.appendChild(row);
@@ -551,7 +566,14 @@ function renderTrips(){
   list.querySelectorAll("input").forEach(inp => {
     inp.addEventListener("input", e => {
       const i = parseInt(e.target.dataset.i);
-      viewedWeek().trips[i] = e.target.value === "" ? null : e.target.value;
+      const trips = viewedWeek().trips;
+      const val = e.target.value;
+      if(val === ""){
+        trips[i] = null;
+      } else {
+        const existingDate = tripDate(trips[i]);
+        trips[i] = existingDate ? {value: val, date: existingDate} : val;
+      }
       saveData();
       updateTripStats();
       refreshLogDerived();
@@ -574,7 +596,7 @@ function renderTrips(){
 
 function updateTripStats(){
   const week = viewedWeek();
-  const total = week.trips.reduce((sum, t) => sum + (parseDecimal(t) || 0), 0);
+  const total = week.trips.reduce((sum, t) => sum + (parseDecimal(tripValue(t)) || 0), 0);
   const goal = parseDecimal(week.goal) || 0;
   const left = goal - total;
   const pct = goal > 0 ? Math.min(100, (total/goal)*100) : 0;
@@ -842,16 +864,28 @@ async function syncStravaRuns(){
     }
 
     const runs = allActivities.filter(a => a.type === "Run" || a.sport_type === "Run" || a.sport_type === "TrailRun");
-    let imported = 0;
+
+    // Grupér nye (ikke allerede importerede) løbeture pr. uge
+    const newRunsByWeek = {};
     runs.forEach(run => {
       if(data.strava.importedIds.includes(run.id)) return;
       const dateLocal = (run.start_date_local || run.start_date).slice(0,10);
       const weekStart = toMonday(dateLocal);
+      (newRunsByWeek[weekStart] = newRunsByWeek[weekStart] || []).push({run, dateLocal});
+    });
+
+    let imported = 0;
+    Object.entries(newRunsByWeek).forEach(([weekStart, entries]) => {
       const week = ensureWeek(weekStart);
-      const km = run.distance / 1000;
-      week.trips.push(km.toFixed(2));
-      data.strava.importedIds.push(run.id);
-      imported++;
+      // fjern ubrugte, tomme standard-felter, så kun de rigtige ture vises
+      week.trips = week.trips.filter(t => t !== null && t !== undefined && t !== "");
+      entries.sort((a,b) => a.dateLocal.localeCompare(b.dateLocal));
+      entries.forEach(({run, dateLocal}) => {
+        const km = run.distance / 1000;
+        week.trips.push({value: km.toFixed(2), date: dateLocal});
+        data.strava.importedIds.push(run.id);
+        imported++;
+      });
     });
 
     saveData();
