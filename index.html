@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Løbetræning – Ugentlig Log</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff6b35">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Løbeøkonomi">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --bg:#0f1620;
+    --card:#182432;
+    --card-2:#1f2e3f;
+    --text:#eaf0f6;
+    --muted:#93a4b8;
+    --accent:#ff6b35;
+    --accent-2:#3ddc97;
+    --danger:#ff5470;
+    --border:#2a3a4d;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:linear-gradient(180deg,#0f1620,#0b1119);
+    color:var(--text);
+    min-height:100vh;
+    padding:24px 16px 64px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+  header{text-align:center;margin-bottom:28px;}
+  header h1{
+    font-size:1.6rem;margin:0 0 4px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  header p{color:var(--muted);margin:0;font-size:.9rem;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    margin:0 0 4px;font-size:1.05rem;
+    display:flex;align-items:center;gap:8px;
+  }
+  .card .sub{color:var(--muted);font-size:.82rem;margin:0 0 16px;}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;}
+  th,td{padding:6px 6px;text-align:left;white-space:nowrap;}
+  th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border);}
+  tbody tr{border-bottom:1px solid var(--border);}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr.today-row{background:rgba(255,107,53,.08);}
+  input[type=date], input[type=text]{
+    background:var(--card-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:7px 8px;
+    font-size:.85rem;
+    width:100%;
+  }
+  input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  input:disabled{opacity:.65;cursor:not-allowed;font-style:italic;}
+  .num-cell{width:100px;}
+  .date-cell{width:150px;}
+  .pill{
+    display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600;
+  }
+  .pill.ok{background:rgba(61,220,151,.15);color:var(--accent-2);}
+  .pill.bad{background:rgba(255,84,112,.15);color:var(--danger);}
+  .pill.neutral{background:rgba(147,164,184,.15);color:var(--muted);}
+  .row-actions{width:36px;}
+  .icon-btn{
+    background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:6px;
+  }
+  .icon-btn:hover{color:var(--danger);background:rgba(255,84,112,.1);}
+  .btn{
+    background:var(--accent);
+    color:#fff;border:none;border-radius:9px;
+    padding:10px 16px;font-size:.88rem;font-weight:600;cursor:pointer;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn.secondary{background:var(--card-2);color:var(--text);border:1px solid var(--border);}
+  .btn.small{padding:6px 12px;font-size:.8rem;}
+  .actions-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px;}
+  @media(max-width:560px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+  .week-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .week-range-label{font-weight:600;color:var(--accent);font-size:.9rem;min-width:170px;text-align:center;}
+
+  .trips-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .trip-row{display:flex;gap:8px;align-items:center;}
+  .trip-row span{width:64px;color:var(--muted);font-size:.82rem;flex-shrink:0;}
+  .progress-wrap{margin-top:16px;}
+  .progress-bar{height:14px;border-radius:999px;background:var(--card-2);overflow:hidden;border:1px solid var(--border);}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .25s ease;}
+  .progress-labels{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-top:6px;}
+  .stat-row{display:flex;gap:20px;margin-top:10px;flex-wrap:wrap;}
+  .stat{background:var(--card-2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:110px;}
+  .stat .label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  .stat .value{font-size:1.25rem;font-weight:700;margin-top:2px;}
+  .hint{font-size:.75rem;color:var(--muted);margin-top:10px;}
+  .conv-pair{display:flex;align-items:center;gap:12px;}
+  .conv-pair .field{flex:1;}
+  .conv-pair .eq{color:var(--muted);font-size:1.1rem;margin-top:18px;}
+  footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:30px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🏃 Løbetræning – Ugentlig Log</h1>
+    <p>Din personlige løbe-tracker · gemmes automatisk i browseren</p>
+  </header>
+
+  <!-- 1. Ugentlig log -->
+  <div class="card">
+    <h2>📅 Ugentlig log</h2>
+    <p class="sub">Registrér km pr. uge. Start dato sættes altid til ugens mandag, og slut dato er automatisk en uge senere. Har du logget ture for ugen under "Ugens ture", bruges summen automatisk som Faktisk km. Stigning og 10%-grænse beregnes ud fra ugen før.</p>
+    <div style="overflow-x:auto;">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>Uge</th>
+            <th>Start dato</th>
+            <th>Slut dato</th>
+            <th>Faktisk (km)</th>
+            <th>Stigning</th>
+            <th>Tilladt (+10%)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <div class="actions-row">
+      <button class="btn" id="addWeekBtn">+ Tilføj uge</button>
+    </div>
+  </div>
+
+  <!-- Oversigt -->
+  <div class="card">
+    <h2>📊 Oversigt</h2>
+    <p class="sub">Samlet status på tværs af alle uger i loggen.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="label">Uger logget</div><div class="value" id="statWeeks">0</div></div>
+      <div class="stat"><div class="label">Km i alt</div><div class="value" id="statTotalKm">0 km</div></div>
+      <div class="stat"><div class="label">Længste uge</div><div class="value" id="statLongest">0 km</div></div>
+      <div class="stat"><div class="label">Længste tur</div><div class="value" id="statLongestTrip">0 km</div></div>
+      <div class="stat"><div class="label">Gns. stigning</div><div class="value" id="statAvgIncrease">–</div></div>
+    </div>
+  </div>
+
+  <!-- 2. Ugens ture -->
+  <div class="card">
+    <h2>👟 Ugens ture</h2>
+    <p class="sub">Sæt et mål for ugen, og log hver tur. Resten regnes ud automatisk. Brug pilene til at se andre uger.</p>
+    <div class="week-nav">
+      <button class="btn secondary small" id="prevWeekBtn" title="Forrige uge">←</button>
+      <span id="weekRangeLabel" class="week-range-label"></span>
+      <button class="btn secondary small" id="nextWeekBtn" title="Næste uge">→</button>
+      <button class="btn secondary small" id="todayWeekBtn" style="margin-left:auto;">I dag</button>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="weekGoal">Mål for ugen (km)</label>
+        <input type="text" inputmode="decimal" id="weekGoal" placeholder="fx 15">
+      </div>
+    </div>
+    <div class="trips-list" id="tripsList"></div>
+    <div class="actions-row">
+      <button class="btn secondary small" id="addTripBtn">+ Tilføj tur</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-labels">
+        <span id="progressPct">0%</span>
+        <span id="progressText">0 / 0 km</span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="label">Løbet i alt</div><div class="value" id="totalDone">0 km</div></div>
+      <div class="stat"><div class="label">Tilbage</div><div class="value" id="totalLeft">0 km</div></div>
+    </div>
+  </div>
+
+  <!-- 3. Pace-beregner -->
+  <div class="card">
+    <h2>⏱️ Pace-beregner</h2>
+    <p class="sub">Udfyld to felter, og tryk på den knap der matcher det du mangler.</p>
+    <div class="grid-3">
+      <div class="field">
+        <label for="paceInput">Pace (min/km, mm:ss)</label>
+        <input type="text" id="paceInput" placeholder="fx 5:30">
+      </div>
+      <div class="field">
+        <label for="timeInput">Tid (hh:mm:ss eller mm:ss)</label>
+        <input type="text" id="timeInput" placeholder="fx 45:00">
+      </div>
+      <div class="field">
+        <label for="distInput">Distance (km)</label>
+        <input type="text" id="distInput" placeholder="fx 10">
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn small" id="calcDist">Beregn distance</button>
+      <button class="btn small" id="calcTime">Beregn tid</button>
+      <button class="btn small" id="calcPace">Beregn pace</button>
+      <button class="btn secondary small" id="clearPace">Ryd</button>
+    </div>
+    <p class="hint" id="paceError"></p>
+  </div>
+
+  <!-- 4. Enhedskonvertering -->
+  <div class="card">
+    <h2>🔄 Enhedskonvertering</h2>
+    <p class="sub">1 mile = 1.609344 km. Skriv i et felt, det andet opdateres automatisk.</p>
+
+    <div class="conv-pair" style="margin-bottom:16px;">
+      <div class="field">
+        <label for="kmField">Kilometer</label>
+        <input type="text" id="kmField" placeholder="fx 10">
+      </div>
+      <div class="eq">=</div>
+      <div class="field">
+        <label for="milesField">Miles</label>
+        <input type="text" id="milesField" placeholder="fx 6.21">
+      </div>
+    </div>
+
+    <div class="conv-pair">
+      <div class="field">
+        <label for="paceKmField">Pace pr. km (mm:ss)</label>
+        <input type="text" id="paceKmField" placeholder="fx 5:00">
+      </div>
+      <div class="eq">=</div>
+      <div class="field">
+        <label for="paceMileField">Pace pr. mile (mm:ss)</label>
+        <input type="text" id="paceMileField" placeholder="fx 8:03">
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Data -->
+  <div class="card">
+    <h2>💾 Data</h2>
+    <p class="sub">Tag en sikkerhedskopi af dine data, eller gendan fra en tidligere eksport.</p>
+    <div class="actions-row">
+      <button class="btn secondary small" id="exportBtn">⬇️ Eksportér data (JSON)</button>
+      <button class="btn secondary small" id="importBtn">⬆️ Importér data</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+    <p class="hint" id="importStatus"></p>
+  </div>
+
+  <footer>Alle data gemmes lokalt i din browser (localStorage) — intet sendes til nettet.</footer>
+</div>
+
+<script>
+const KM_PER_MILE = 1.609344;
+const STORAGE_KEY = "lobeokonomi-data-v1";
+const DEFAULT_TRIP_COUNT = 4;
+
+function toDateStr(d){
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+function addDays(dateStr, days){
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return toDateStr(d);
+}
+function toMonday(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay(); // 0=søn,1=man,...6=lør
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return toDateStr(d);
+}
+function formatDaDate(dateStr){
+  const [y,m,d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
+function parseDecimal(str){
+  if(str === null || str === undefined) return null;
+  const s = String(str).trim().replace(",", ".");
+  if(s === "") return null;
+  const v = parseFloat(s);
+  return isNaN(v) ? null : v;
+}
+
+const CURRENT_WEEK_START = toMonday(toDateStr(new Date()));
+const CURRENT_WEEK_END = addDays(CURRENT_WEEK_START, 6);
+
+function loadData(){
+  let data = null;
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) data = JSON.parse(raw);
+  }catch(e){}
+  if(!data){
+    data = { weeks: [{start:"", actual:null}], tripsByWeek: {} };
+  }
+  if(!data.tripsByWeek) data.tripsByWeek = {};
+  // migrer ældre format (ét globalt mål/ture) ind under den aktuelle uge
+  if(data.goal !== undefined || data.trips !== undefined){
+    if(!data.tripsByWeek[CURRENT_WEEK_START]){
+      data.tripsByWeek[CURRENT_WEEK_START] = {
+        goal: data.goal ?? null,
+        trips: data.trips ?? Array(DEFAULT_TRIP_COUNT).fill(null)
+      };
+    }
+    delete data.goal;
+    delete data.trips;
+  }
+  if(!Array.isArray(data.weeks)) data.weeks = [{start:"", actual:null}];
+  data.weeks.forEach(w => delete w.end); // 'end' beregnes altid, gemmes ikke længere
+  // trim overflødige, tomme tur-felter ned til standardantallet
+  Object.values(data.tripsByWeek).forEach(week => {
+    while(week.trips.length > DEFAULT_TRIP_COUNT){
+      const last = week.trips[week.trips.length-1];
+      if(last === null || last === undefined || last === "") week.trips.pop();
+      else break;
+    }
+  });
+  return data;
+}
+let data = loadData();
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function ensureWeek(weekStart){
+  if(!data.tripsByWeek[weekStart]){
+    data.tripsByWeek[weekStart] = {goal: null, trips: Array(DEFAULT_TRIP_COUNT).fill(null)};
+  }
+  return data.tripsByWeek[weekStart];
+}
+let viewedWeekStart = CURRENT_WEEK_START;
+function viewedWeek(){ return ensureWeek(viewedWeekStart); }
+
+/* ---------- 1. Ugentlig log ---------- */
+function weekTripsTotal(weekStart){
+  const w = data.tripsByWeek[weekStart];
+  if(!w) return null;
+  const nums = w.trips.map(parseDecimal).filter(v => v !== null);
+  if(nums.length === 0) return null;
+  return nums.reduce((s,v) => s+v, 0);
+}
+function effectiveActual(i){
+  const w = data.weeks[i];
+  if(!w) return null;
+  const auto = w.start ? weekTripsTotal(w.start) : null;
+  if(auto !== null) return auto;
+  return parseDecimal(w.actual);
+}
+function baselineForRow(i){
+  return i > 0 ? effectiveActual(i-1) : null;
+}
+function computeDerivedHtml(i){
+  const actual = effectiveActual(i);
+  const baseline = baselineForRow(i);
+  let pctHtml = '<span class="pill neutral">–</span>';
+  let allowedHtml = '<span class="pill neutral">–</span>';
+  if(baseline !== null){
+    allowedHtml = `<span class="pill neutral">${(baseline*1.1).toFixed(2)} km</span>`;
+    if(actual !== null){
+      const pct = (actual/baseline - 1) * 100;
+      const cls = pct <= 10.0001 ? "ok" : "bad";
+      pctHtml = `<span class="pill ${cls}">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span>`;
+    }
+  }
+  return {pctHtml, allowedHtml};
+}
+
+function renderLog(){
+  const body = document.getElementById("logBody");
+  body.innerHTML = "";
+  data.weeks.forEach((w, i) => {
+    const tr = document.createElement("tr");
+    tr.dataset.row = i;
+    const isToday = w.start === CURRENT_WEEK_START;
+    if(isToday) tr.classList.add("today-row");
+
+    const end = w.start ? addDays(w.start, 6) : "";
+    const auto = w.start ? weekTripsTotal(w.start) : null;
+    const actualVal = auto !== null ? auto.toFixed(2) : (w.actual ?? "");
+    const { pctHtml, allowedHtml } = computeDerivedHtml(i);
+
+    tr.innerHTML = `
+      <td>${i+1}${isToday ? ' <span class="pill ok">i dag</span>' : ""}</td>
+      <td class="date-cell"><input type="date" data-i="${i}" data-field="start" value="${w.start||""}" title="Skal være en mandag"></td>
+      <td class="date-cell"><input type="date" data-i="${i}" data-field="end" value="${end}" disabled title="Beregnes automatisk (start + 6 dage)"></td>
+      <td class="num-cell"><input type="text" inputmode="decimal" data-i="${i}" data-field="actual" value="${actualVal}" placeholder="km" ${auto !== null ? "disabled" : ""} title="${auto !== null ? "Beregnes automatisk ud fra Ugens ture" : ""}"></td>
+      <td class="pct-cell">${pctHtml}</td>
+      <td class="allowed-cell">${allowedHtml}</td>
+      <td class="row-actions"><button class="icon-btn" data-del="${i}" title="Slet uge">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+
+  body.querySelectorAll('input[data-field="start"], input[data-field="actual"]').forEach(inp => {
+    inp.addEventListener("input", e => {
+      const i = parseInt(e.target.dataset.i);
+      const field = e.target.dataset.field;
+      let value = e.target.value === "" ? null : e.target.value;
+      if(field === "start" && value) value = toMonday(value);
+      data.weeks[i][field] = value;
+      saveData();
+      refreshLogDerived();
+    });
+  });
+  body.querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      const i = parseInt(e.target.dataset.del);
+      const hasData = effectiveActual(i) !== null;
+      if(hasData && !confirm(`Slet uge ${i+1}? Dette kan ikke fortrydes.`)) return;
+      data.weeks.splice(i,1);
+      saveData();
+      renderLog();
+    });
+  });
+  updateOverallStats();
+}
+
+function refreshLogDerived(){
+  data.weeks.forEach((w, i) => {
+    const row = document.querySelector(`#logBody tr[data-row="${i}"]`);
+    if(!row) return;
+
+    const isToday = w.start === CURRENT_WEEK_START;
+    row.classList.toggle("today-row", isToday);
+    row.children[0].innerHTML = `${i+1}${isToday ? ' <span class="pill ok">i dag</span>' : ""}`;
+
+    const endInput = row.querySelector('[data-field="end"]');
+    if(endInput) endInput.value = w.start ? addDays(w.start, 6) : "";
+
+    const auto = w.start ? weekTripsTotal(w.start) : null;
+    const actualInput = row.querySelector('[data-field="actual"]');
+    if(actualInput){
+      if(auto !== null){
+        actualInput.disabled = true;
+        actualInput.title = "Beregnes automatisk ud fra Ugens ture";
+        actualInput.value = auto.toFixed(2);
+      } else {
+        actualInput.disabled = false;
+        actualInput.title = "";
+        if(document.activeElement !== actualInput){
+          actualInput.value = w.actual ?? "";
+        }
+      }
+    }
+
+    const { pctHtml, allowedHtml } = computeDerivedHtml(i);
+    row.querySelector(".pct-cell").innerHTML = pctHtml;
+    row.querySelector(".allowed-cell").innerHTML = allowedHtml;
+  });
+  updateOverallStats();
+}
+
+function updateOverallStats(){
+  const actuals = data.weeks.map((w,i) => effectiveActual(i)).filter(v => v !== null);
+  const totalKm = actuals.reduce((s,v) => s+v, 0);
+  const longest = actuals.length ? Math.max(...actuals) : 0;
+
+  let increases = [];
+  data.weeks.forEach((w,i) => {
+    const actual = effectiveActual(i);
+    const baseline = baselineForRow(i);
+    if(actual !== null && baseline !== null && baseline > 0){
+      increases.push((actual/baseline - 1) * 100);
+    }
+  });
+  const avgIncrease = increases.length ? increases.reduce((s,v) => s+v, 0) / increases.length : null;
+
+  const allTrips = Object.values(data.tripsByWeek).flatMap(w => w.trips.map(parseDecimal)).filter(v => v !== null);
+  const longestTrip = allTrips.length ? Math.max(...allTrips) : 0;
+
+  document.getElementById("statWeeks").textContent = actuals.length;
+  document.getElementById("statTotalKm").textContent = totalKm.toFixed(2) + " km";
+  document.getElementById("statLongest").textContent = longest.toFixed(2) + " km";
+  document.getElementById("statLongestTrip").textContent = longestTrip.toFixed(2) + " km";
+  document.getElementById("statAvgIncrease").textContent =
+    avgIncrease === null ? "–" : (avgIncrease >= 0 ? "+" : "") + avgIncrease.toFixed(1) + "%";
+}
+
+document.getElementById("addWeekBtn").addEventListener("click", () => {
+  const last = data.weeks[data.weeks.length-1];
+  let nextStart = "";
+  if(last && last.start){
+    nextStart = toMonday(addDays(last.start, 7));
+  }
+  data.weeks.push({start: nextStart, actual:null});
+  saveData();
+  renderLog();
+});
+
+/* ---------- 2. Ugens ture ---------- */
+function renderTrips(){
+  const end = addDays(viewedWeekStart, 6);
+  document.getElementById("weekRangeLabel").textContent =
+    `${formatDaDate(viewedWeekStart)} – ${formatDaDate(end)}`;
+
+  const week = viewedWeek();
+  document.getElementById("weekGoal").value = week.goal ?? "";
+  const list = document.getElementById("tripsList");
+  list.innerHTML = "";
+  week.trips.forEach((t, i) => {
+    const row = document.createElement("div");
+    row.className = "trip-row";
+    row.innerHTML = `
+      <span>Tur ${i+1}</span>
+      <input type="text" inputmode="decimal" data-i="${i}" value="${t ?? ""}" placeholder="km">
+      <button class="icon-btn" data-del="${i}" title="Slet tur">✕</button>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("input", e => {
+      const i = parseInt(e.target.dataset.i);
+      viewedWeek().trips[i] = e.target.value === "" ? null : e.target.value;
+      saveData();
+      updateTripStats();
+      refreshLogDerived();
+    });
+  });
+  list.querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      const i = parseInt(e.target.dataset.del);
+      const t = viewedWeek().trips[i];
+      const hasData = t !== null && t !== undefined && t !== "";
+      if(hasData && !confirm(`Slet tur ${i+1}?`)) return;
+      viewedWeek().trips.splice(i,1);
+      saveData();
+      renderTrips();
+      refreshLogDerived();
+    });
+  });
+  updateTripStats();
+}
+
+function updateTripStats(){
+  const week = viewedWeek();
+  const total = week.trips.reduce((sum, t) => sum + (parseDecimal(t) || 0), 0);
+  const goal = parseDecimal(week.goal) || 0;
+  const left = goal - total;
+  const pct = goal > 0 ? Math.min(100, (total/goal)*100) : 0;
+
+  document.getElementById("totalDone").textContent = total.toFixed(2) + " km";
+  document.getElementById("totalLeft").textContent = (goal > 0 ? left.toFixed(2) : "0") + " km";
+  document.getElementById("progressFill").style.width = pct.toFixed(1) + "%";
+  document.getElementById("progressPct").textContent = pct.toFixed(0) + "%";
+  document.getElementById("progressText").textContent = `${total.toFixed(2)} / ${goal.toFixed(2)} km`;
+
+  const leftEl = document.getElementById("totalLeft");
+  leftEl.style.color = left < 0 ? "var(--accent-2)" : "var(--text)";
+}
+
+document.getElementById("weekGoal").addEventListener("input", e => {
+  viewedWeek().goal = e.target.value === "" ? null : e.target.value;
+  saveData();
+  updateTripStats();
+});
+document.getElementById("addTripBtn").addEventListener("click", () => {
+  viewedWeek().trips.push(null);
+  saveData();
+  renderTrips();
+});
+document.getElementById("prevWeekBtn").addEventListener("click", () => {
+  viewedWeekStart = addDays(viewedWeekStart, -7);
+  renderTrips();
+});
+document.getElementById("nextWeekBtn").addEventListener("click", () => {
+  viewedWeekStart = addDays(viewedWeekStart, 7);
+  renderTrips();
+});
+document.getElementById("todayWeekBtn").addEventListener("click", () => {
+  viewedWeekStart = CURRENT_WEEK_START;
+  renderTrips();
+});
+
+/* ---------- 3. Pace-beregner ---------- */
+function parseMMSS(str){
+  if(!str) return null;
+  const parts = str.trim().replace(",",".").split(":");
+  if(parts.length === 2){
+    const m = parseFloat(parts[0]), s = parseFloat(parts[1]);
+    if(isNaN(m) || isNaN(s)) return null;
+    return m + s/60;
+  }
+  if(parts.length === 1){
+    const v = parseFloat(parts[0]);
+    return isNaN(v) ? null : v;
+  }
+  return null;
+}
+function parseHHMMSS(str){
+  if(!str) return null;
+  const parts = str.trim().split(":");
+  if(parts.length === 3){
+    const h = parseFloat(parts[0]), m = parseFloat(parts[1]), s = parseFloat(parts[2]);
+    if([h,m,s].some(isNaN)) return null;
+    return h*60 + m + s/60;
+  }
+  return parseMMSS(str);
+}
+function formatMMSS(totalMinutes){
+  if(totalMinutes === null || isNaN(totalMinutes) || totalMinutes < 0) return "";
+  const m = Math.floor(totalMinutes);
+  const s = Math.round((totalMinutes - m) * 60);
+  const mm = s === 60 ? m+1 : m;
+  const ss = s === 60 ? 0 : s;
+  return `${mm}:${String(ss).padStart(2,"0")}`;
+}
+function formatHHMMSS(totalMinutes){
+  if(totalMinutes === null || isNaN(totalMinutes) || totalMinutes < 0) return "";
+  const totalSeconds = Math.round(totalMinutes*60);
+  const h = Math.floor(totalSeconds/3600);
+  const m = Math.floor((totalSeconds%3600)/60);
+  const s = totalSeconds%60;
+  if(h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  return `${m}:${String(s).padStart(2,"0")}`;
+}
+
+function paceError(msg){
+  document.getElementById("paceError").textContent = msg;
+}
+
+document.getElementById("calcDist").addEventListener("click", () => {
+  const pace = parseMMSS(document.getElementById("paceInput").value);
+  const time = parseHHMMSS(document.getElementById("timeInput").value);
+  if(pace === null || time === null || pace === 0){ paceError("Udfyld pace og tid korrekt (fx 5:30 og 45:00)."); return; }
+  const dist = time / pace;
+  document.getElementById("distInput").value = dist.toFixed(2);
+  paceError("");
+});
+document.getElementById("calcTime").addEventListener("click", () => {
+  const pace = parseMMSS(document.getElementById("paceInput").value);
+  const dist = parseDecimal(document.getElementById("distInput").value);
+  if(pace === null || dist === null){ paceError("Udfyld pace og distance korrekt (fx 5:30 og 10)."); return; }
+  const time = pace * dist;
+  document.getElementById("timeInput").value = formatHHMMSS(time);
+  paceError("");
+});
+document.getElementById("calcPace").addEventListener("click", () => {
+  const time = parseHHMMSS(document.getElementById("timeInput").value);
+  const dist = parseDecimal(document.getElementById("distInput").value);
+  if(time === null || dist === null || dist === 0){ paceError("Udfyld tid og distance korrekt (fx 45:00 og 10)."); return; }
+  const pace = time / dist;
+  document.getElementById("paceInput").value = formatMMSS(pace);
+  paceError("");
+});
+document.getElementById("clearPace").addEventListener("click", () => {
+  document.getElementById("paceInput").value = "";
+  document.getElementById("timeInput").value = "";
+  document.getElementById("distInput").value = "";
+  paceError("");
+});
+
+/* ---------- 4. Enhedskonvertering ---------- */
+const kmField = document.getElementById("kmField");
+const milesField = document.getElementById("milesField");
+kmField.addEventListener("input", () => {
+  const v = parseDecimal(kmField.value);
+  milesField.value = v === null ? "" : (v / KM_PER_MILE).toFixed(2);
+});
+milesField.addEventListener("input", () => {
+  const v = parseDecimal(milesField.value);
+  kmField.value = v === null ? "" : (v * KM_PER_MILE).toFixed(2);
+});
+
+const paceKmField = document.getElementById("paceKmField");
+const paceMileField = document.getElementById("paceMileField");
+paceKmField.addEventListener("input", () => {
+  const v = parseMMSS(paceKmField.value);
+  paceMileField.value = v === null ? "" : formatMMSS(v * KM_PER_MILE);
+});
+paceMileField.addEventListener("input", () => {
+  const v = parseMMSS(paceMileField.value);
+  paceKmField.value = v === null ? "" : formatMMSS(v / KM_PER_MILE);
+});
+
+/* ---------- 5. Data (eksport/import) ---------- */
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `lobeokonomi-data-${toDateStr(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+document.getElementById("importBtn").addEventListener("click", () => {
+  document.getElementById("importFile").click();
+});
+document.getElementById("importFile").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const imported = JSON.parse(reader.result);
+      if(!imported || !Array.isArray(imported.weeks) || typeof imported.tripsByWeek !== "object"){
+        throw new Error("filen har ikke det forventede format");
+      }
+      if(!confirm("Dette overskriver dine nuværende data i denne browser. Fortsæt?")) return;
+      imported.weeks.forEach(w => delete w.end);
+      data = imported;
+      saveData();
+      viewedWeekStart = CURRENT_WEEK_START;
+      renderLog();
+      renderTrips();
+      document.getElementById("importStatus").textContent = "Data importeret kl. " + new Date().toLocaleTimeString("da-DK");
+    }catch(err){
+      document.getElementById("importStatus").textContent = "Kunne ikke importere: " + err.message;
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+/* ---------- init ---------- */
+renderLog();
+renderTrips();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker kunne ikke registreres:", err));
+  });
+}
+</script>
+</body>
+</html>

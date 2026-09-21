@@ -1,0 +1,17 @@
+{
+  "name": "Løbetræning – Ugentlig Log",
+  "short_name": "Løbeøkonomi",
+  "description": "Personlig løbe-tracker: ugentlig log, ugens ture, pace-beregner og enhedskonvertering.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1620",
+  "theme_color": "#ff6b35",
+  "lang": "da",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
