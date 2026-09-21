@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Løbetræning – Ugentlig Log</title>
+<title>Løbeøkonomi</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff6b35">
+<meta name="theme-color" content="#0b1220" id="themeColorMeta">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,32 +14,69 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   :root{
-    --bg:#0f1620;
-    --card:#182432;
-    --card-2:#1f2e3f;
-    --text:#eaf0f6;
-    --muted:#93a4b8;
-    --accent:#ff6b35;
-    --accent-2:#3ddc97;
-    --danger:#ff5470;
-    --border:#2a3a4d;
+    --accent:#0ea5e9;
+    --accent-2:#22c55e;
+    --danger:#ef4444;
+  }
+  :root, [data-theme="dark"]{
+    --bg:#0b1220;
+    --card:#131b2b;
+    --card-2:#1b2740;
+    --text:#eef2f7;
+    --muted:#8b98ab;
+    --border:#253552;
+  }
+  [data-theme="light"]{
+    --bg:#f2f5f9;
+    --card:#ffffff;
+    --card-2:#eef1f6;
+    --text:#111827;
+    --muted:#5b6472;
+    --border:#dbe2ea;
   }
   *{box-sizing:border-box;}
+  html,body{height:100%;}
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-    background:linear-gradient(180deg,#0f1620,#0b1119);
+    background:var(--bg);
     color:var(--text);
-    min-height:100vh;
-    padding:24px 16px 64px;
   }
   .wrap{max-width:900px;margin:0 auto;}
-  header{text-align:center;margin-bottom:28px;}
-  header h1{
-    font-size:1.6rem;margin:0 0 4px;
-    display:flex;align-items:center;justify-content:center;gap:10px;
+
+  .topbar{
+    position:sticky;top:0;z-index:10;
+    background:var(--bg);
+    border-bottom:1px solid var(--border);
+    padding:10px 16px 8px;
   }
-  header p{color:var(--muted);margin:0;font-size:.9rem;}
+  .topbar-inner{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .topbar-icon{width:26px;height:26px;border-radius:7px;display:block;}
+  .topbar-title{font-weight:700;font-size:1.05rem;}
+  .page-nav{display:flex;align-items:center;justify-content:center;gap:16px;}
+  .page-arrow{background:none;border:none;color:var(--muted);font-size:1.5rem;line-height:1;cursor:pointer;padding:0 4px;}
+  .page-arrow:hover{color:var(--accent);}
+  .page-dots{display:flex;align-items:center;gap:8px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--border);border:none;padding:0;cursor:pointer;}
+  .dot.active{background:var(--accent);width:22px;border-radius:5px;transition:width .2s ease;}
+  .page-label{font-size:.72rem;color:var(--muted);text-align:center;margin-top:4px;text-transform:uppercase;letter-spacing:.04em;}
+
+  .pager{
+    display:flex;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+    height:calc(100vh - 80px);
+  }
+  .page{
+    flex:0 0 100%;
+    min-width:100%;
+    scroll-snap-align:start;
+    overflow-y:auto;
+    padding:16px 16px 40px;
+  }
+
   .card{
     background:var(--card);
     border:1px solid var(--border);
@@ -57,8 +94,8 @@
   th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border);}
   tbody tr{border-bottom:1px solid var(--border);}
   tbody tr:last-child{border-bottom:none;}
-  tbody tr.today-row{background:rgba(255,107,53,.08);}
-  input[type=date], input[type=text]{
+  tbody tr.today-row{background:color-mix(in srgb, var(--accent) 10%, transparent);}
+  input[type=text]{
     background:var(--card-2);
     border:1px solid var(--border);
     color:var(--text);
@@ -68,20 +105,17 @@
     width:100%;
   }
   input:focus{outline:2px solid var(--accent);outline-offset:1px;}
-  input:disabled{opacity:.65;cursor:not-allowed;font-style:italic;}
-  .num-cell{width:100px;}
-  .date-cell{width:150px;}
+  .empty-state{color:var(--muted);font-size:.85rem;padding:14px 0;text-align:center;}
   .pill{
     display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600;
   }
-  .pill.ok{background:rgba(61,220,151,.15);color:var(--accent-2);}
-  .pill.bad{background:rgba(255,84,112,.15);color:var(--danger);}
-  .pill.neutral{background:rgba(147,164,184,.15);color:var(--muted);}
-  .row-actions{width:36px;}
+  .pill.ok{background:color-mix(in srgb, var(--accent-2) 18%, transparent);color:var(--accent-2);}
+  .pill.bad{background:color-mix(in srgb, var(--danger) 18%, transparent);color:var(--danger);}
+  .pill.neutral{background:color-mix(in srgb, var(--muted) 18%, transparent);color:var(--muted);}
   .icon-btn{
     background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:6px;
   }
-  .icon-btn:hover{color:var(--danger);background:rgba(255,84,112,.1);}
+  .icon-btn:hover{color:var(--danger);background:color-mix(in srgb, var(--danger) 10%, transparent);}
   .btn{
     background:var(--accent);
     color:#fff;border:none;border-radius:9px;
@@ -101,7 +135,11 @@
 
   .trips-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
   .trip-row{display:flex;gap:8px;align-items:center;}
-  .trip-row span{width:64px;color:var(--muted);font-size:.82rem;flex-shrink:0;}
+  .trip-row .trip-label{width:64px;color:var(--muted);font-size:.82rem;flex-shrink:0;}
+  .trip-row .trip-value{
+    flex:1;background:var(--card-2);border:1px solid var(--border);border-radius:8px;
+    padding:7px 10px;font-size:.85rem;
+  }
   .progress-wrap{margin-top:16px;}
   .progress-bar{height:14px;border-radius:999px;background:var(--card-2);overflow:hidden;border:1px solid var(--border);}
   .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .25s ease;}
@@ -114,180 +152,384 @@
   .conv-pair{display:flex;align-items:center;gap:12px;}
   .conv-pair .field{flex:1;}
   .conv-pair .eq{color:var(--muted);font-size:1.1rem;margin-top:18px;}
-  footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:30px;}
+  footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:10px;}
+
+  .toggle-group{display:flex;gap:8px;}
+  .toggle-btn{
+    flex:1;background:var(--card-2);border:1px solid var(--border);color:var(--text);
+    border-radius:9px;padding:10px 14px;font-size:.85rem;font-weight:600;cursor:pointer;
+  }
+  .toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 </style>
 </head>
-<body>
-<div class="wrap">
-  <header>
-    <h1>🏃 Løbetræning – Ugentlig Log</h1>
-    <p>Din personlige løbe-tracker · gemmes automatisk i browseren</p>
-  </header>
+<body data-theme="dark">
 
-  <!-- 1. Ugentlig log -->
-  <div class="card">
-    <h2>📅 Ugentlig log</h2>
-    <p class="sub">Registrér km pr. uge. Start dato sættes altid til ugens mandag, og slut dato er automatisk en uge senere. Har du logget ture for ugen under "Ugens ture", bruges summen automatisk som Faktisk km. Stigning og 10%-grænse beregnes ud fra ugen før.</p>
-    <div style="overflow-x:auto;">
-      <table id="logTable">
-        <thead>
-          <tr>
-            <th>Uge</th>
-            <th>Start dato</th>
-            <th>Slut dato</th>
-            <th>Faktisk (km)</th>
-            <th>Stigning</th>
-            <th>Tilladt (+10%)</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="logBody"></tbody>
-      </table>
-    </div>
-    <div class="actions-row">
-      <button class="btn" id="addWeekBtn">+ Tilføj uge</button>
-    </div>
+<div class="topbar">
+  <div class="topbar-inner">
+    <img src="icons/icon-192.png" alt="" class="topbar-icon">
+    <span class="topbar-title">Løbeøkonomi</span>
   </div>
-
-  <!-- Oversigt -->
-  <div class="card">
-    <h2>📊 Oversigt</h2>
-    <p class="sub">Samlet status på tværs af alle uger i loggen.</p>
-    <div class="stat-row">
-      <div class="stat"><div class="label">Uger logget</div><div class="value" id="statWeeks">0</div></div>
-      <div class="stat"><div class="label">Km i alt</div><div class="value" id="statTotalKm">0 km</div></div>
-      <div class="stat"><div class="label">Længste uge</div><div class="value" id="statLongest">0 km</div></div>
-      <div class="stat"><div class="label">Længste tur</div><div class="value" id="statLongestTrip">0 km</div></div>
-      <div class="stat"><div class="label">Gns. stigning</div><div class="value" id="statAvgIncrease">–</div></div>
+  <div class="page-nav">
+    <button class="page-arrow" id="prevPageBtn" aria-label="Forrige side">‹</button>
+    <div class="page-dots" id="pageDots">
+      <button class="dot active" data-page="0"></button>
+      <button class="dot" data-page="1"></button>
+      <button class="dot" data-page="2"></button>
     </div>
+    <button class="page-arrow" id="nextPageBtn" aria-label="Næste side">›</button>
   </div>
+  <div class="page-label" id="pageLabel"></div>
+</div>
 
-  <!-- 2. Ugens ture -->
-  <div class="card">
-    <h2>👟 Ugens ture</h2>
-    <p class="sub">Sæt et mål for ugen, og log hver tur. Resten regnes ud automatisk. Brug pilene til at se andre uger.</p>
-    <div class="week-nav">
-      <button class="btn secondary small" id="prevWeekBtn" title="Forrige uge">←</button>
-      <span id="weekRangeLabel" class="week-range-label"></span>
-      <button class="btn secondary small" id="nextWeekBtn" title="Næste uge">→</button>
-      <button class="btn secondary small" id="todayWeekBtn" style="margin-left:auto;">I dag</button>
-    </div>
-    <div class="grid-2">
-      <div class="field">
-        <label for="weekGoal">Mål for ugen (km)</label>
-        <input type="text" inputmode="decimal" id="weekGoal" placeholder="fx 15">
-      </div>
-    </div>
-    <div class="trips-list" id="tripsList"></div>
-    <div class="actions-row">
-      <button class="btn secondary small" id="addTripBtn">+ Tilføj tur</button>
-    </div>
-    <div class="progress-wrap">
-      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-      <div class="progress-labels">
-        <span id="progressPct">0%</span>
-        <span id="progressText">0 / 0 km</span>
-      </div>
-    </div>
-    <div class="stat-row">
-      <div class="stat"><div class="label">Løbet i alt</div><div class="value" id="totalDone">0 km</div></div>
-      <div class="stat"><div class="label">Tilbage</div><div class="value" id="totalLeft">0 km</div></div>
-    </div>
-  </div>
+<div class="pager" id="pager">
 
-  <!-- 3. Pace-beregner -->
-  <div class="card">
-    <h2>⏱️ Pace-beregner</h2>
-    <p class="sub">Udfyld to felter, og tryk på den knap der matcher det du mangler.</p>
-    <div class="grid-3">
-      <div class="field">
-        <label for="paceInput">Pace (min/km, mm:ss)</label>
-        <input type="text" id="paceInput" placeholder="fx 5:30">
+  <!-- ================= SIDE 1: LOG ================= -->
+  <section class="page" data-page="0">
+    <div class="wrap">
+      <div class="card">
+        <h2>📅 <span data-i18n="log_heading"></span></h2>
+        <p class="sub" data-i18n="log_sub"></p>
+        <div style="overflow-x:auto;">
+          <table id="logTable">
+            <thead>
+              <tr>
+                <th data-i18n="log_col_week"></th>
+                <th data-i18n="log_col_start"></th>
+                <th data-i18n="log_col_end"></th>
+                <th data-i18n="log_col_actual"></th>
+                <th data-i18n="log_col_increase"></th>
+                <th data-i18n="log_col_allowed"></th>
+              </tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="field">
-        <label for="timeInput">Tid (hh:mm:ss eller mm:ss)</label>
-        <input type="text" id="timeInput" placeholder="fx 45:00">
+
+      <div class="card">
+        <h2>📊 <span data-i18n="overview_heading"></span></h2>
+        <p class="sub" data-i18n="overview_sub"></p>
+        <div class="stat-row">
+          <div class="stat"><div class="label" data-i18n="stat_weeks"></div><div class="value" id="statWeeks">0</div></div>
+          <div class="stat"><div class="label" data-i18n="stat_totalkm"></div><div class="value" id="statTotalKm">0 km</div></div>
+          <div class="stat"><div class="label" data-i18n="stat_longest_week"></div><div class="value" id="statLongest">0 km</div></div>
+          <div class="stat"><div class="label" data-i18n="stat_longest_trip"></div><div class="value" id="statLongestTrip">0 km</div></div>
+          <div class="stat"><div class="label" data-i18n="stat_avg_increase"></div><div class="value" id="statAvgIncrease">–</div></div>
+        </div>
       </div>
-      <div class="field">
-        <label for="distInput">Distance (km)</label>
-        <input type="text" id="distInput" placeholder="fx 10">
+
+      <div class="card">
+        <h2>👟 <span data-i18n="trips_heading"></span></h2>
+        <p class="sub" data-i18n="trips_sub"></p>
+        <div class="week-nav">
+          <button class="btn secondary small" id="prevWeekBtn">←</button>
+          <span id="weekRangeLabel" class="week-range-label"></span>
+          <button class="btn secondary small" id="nextWeekBtn">→</button>
+          <button class="btn secondary small" id="todayWeekBtn" style="margin-left:auto;" data-i18n="week_nav_today"></button>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="weekGoal" data-i18n="goal_label"></label>
+            <input type="text" inputmode="decimal" id="weekGoal" data-i18n-placeholder="goal_placeholder">
+          </div>
+        </div>
+        <div class="trips-list" id="tripsList"></div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+          <div class="progress-labels">
+            <span id="progressPct">0%</span>
+            <span id="progressText">0 / 0 km</span>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="label" data-i18n="stat_total_done"></div><div class="value" id="totalDone">0 km</div></div>
+          <div class="stat"><div class="label" data-i18n="stat_total_left"></div><div class="value" id="totalLeft">0 km</div></div>
+        </div>
       </div>
     </div>
-    <div class="actions-row">
-      <button class="btn small" id="calcDist">Beregn distance</button>
-      <button class="btn small" id="calcTime">Beregn tid</button>
-      <button class="btn small" id="calcPace">Beregn pace</button>
-      <button class="btn secondary small" id="clearPace">Ryd</button>
-    </div>
-    <p class="hint" id="paceError"></p>
-  </div>
+  </section>
 
-  <!-- 4. Enhedskonvertering -->
-  <div class="card">
-    <h2>🔄 Enhedskonvertering</h2>
-    <p class="sub">1 mile = 1.609344 km. Skriv i et felt, det andet opdateres automatisk.</p>
-
-    <div class="conv-pair" style="margin-bottom:16px;">
-      <div class="field">
-        <label for="kmField">Kilometer</label>
-        <input type="text" id="kmField" placeholder="fx 10">
+  <!-- ================= SIDE 2: VÆRKTØJER ================= -->
+  <section class="page" data-page="1">
+    <div class="wrap">
+      <div class="card">
+        <h2>⏱️ <span data-i18n="pace_heading"></span></h2>
+        <p class="sub" data-i18n="pace_sub"></p>
+        <div class="grid-3">
+          <div class="field">
+            <label for="paceInput" data-i18n="pace_label"></label>
+            <input type="text" id="paceInput" data-i18n-placeholder="pace_placeholder">
+          </div>
+          <div class="field">
+            <label for="timeInput" data-i18n="time_label"></label>
+            <input type="text" id="timeInput" data-i18n-placeholder="time_placeholder">
+          </div>
+          <div class="field">
+            <label for="distInput" data-i18n="dist_label"></label>
+            <input type="text" id="distInput" data-i18n-placeholder="dist_placeholder">
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="btn small" id="calcDist" data-i18n="btn_calc_dist"></button>
+          <button class="btn small" id="calcTime" data-i18n="btn_calc_time"></button>
+          <button class="btn small" id="calcPace" data-i18n="btn_calc_pace"></button>
+          <button class="btn secondary small" id="clearPace" data-i18n="btn_clear"></button>
+        </div>
+        <p class="hint" id="paceError"></p>
       </div>
-      <div class="eq">=</div>
-      <div class="field">
-        <label for="milesField">Miles</label>
-        <input type="text" id="milesField" placeholder="fx 6.21">
+
+      <div class="card">
+        <h2>🔄 <span data-i18n="convert_heading"></span></h2>
+        <p class="sub" data-i18n="convert_sub"></p>
+        <div class="conv-pair" style="margin-bottom:16px;">
+          <div class="field">
+            <label for="kmField" data-i18n="km_label"></label>
+            <input type="text" id="kmField" data-i18n-placeholder="km_placeholder">
+          </div>
+          <div class="eq">=</div>
+          <div class="field">
+            <label for="milesField" data-i18n="miles_label"></label>
+            <input type="text" id="milesField" data-i18n-placeholder="miles_placeholder">
+          </div>
+        </div>
+        <div class="conv-pair">
+          <div class="field">
+            <label for="paceKmField" data-i18n="pace_km_label"></label>
+            <input type="text" id="paceKmField" data-i18n-placeholder="pace_km_placeholder">
+          </div>
+          <div class="eq">=</div>
+          <div class="field">
+            <label for="paceMileField" data-i18n="pace_mile_label"></label>
+            <input type="text" id="paceMileField" data-i18n-placeholder="pace_mile_placeholder">
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="conv-pair">
-      <div class="field">
-        <label for="paceKmField">Pace pr. km (mm:ss)</label>
-        <input type="text" id="paceKmField" placeholder="fx 5:00">
+  <!-- ================= SIDE 3: INDSTILLINGER ================= -->
+  <section class="page" data-page="2">
+    <div class="wrap">
+      <div class="card">
+        <h2>🔗 <span data-i18n="strava_heading"></span></h2>
+        <p class="sub" data-i18n="strava_sub"></p>
+        <div class="actions-row">
+          <button class="btn" id="stravaConnectBtn" data-i18n="btn_strava_connect"></button>
+          <button class="btn secondary small" id="stravaSyncBtn" style="display:none;" data-i18n="btn_strava_sync"></button>
+          <button class="btn secondary small" id="stravaDisconnectBtn" style="display:none;" data-i18n="btn_strava_disconnect"></button>
+        </div>
+        <p class="hint" id="stravaStatus"></p>
       </div>
-      <div class="eq">=</div>
-      <div class="field">
-        <label for="paceMileField">Pace pr. mile (mm:ss)</label>
-        <input type="text" id="paceMileField" placeholder="fx 8:03">
+
+      <div class="card">
+        <h2>💾 <span data-i18n="data_heading"></span></h2>
+        <p class="sub" data-i18n="data_sub"></p>
+        <div class="actions-row">
+          <button class="btn secondary small" id="exportBtn" data-i18n="btn_export"></button>
+          <button class="btn secondary small" id="importBtn" data-i18n="btn_import"></button>
+          <input type="file" id="importFile" accept="application/json" style="display:none;">
+        </div>
+        <p class="hint" id="importStatus"></p>
       </div>
-    </div>
-  </div>
 
-  <!-- Strava -->
-  <div class="card">
-    <h2>🔗 Strava</h2>
-    <p class="sub">Forbind din Strava-konto, så dine løbeture automatisk hentes ind i "Ugens ture" i stedet for at blive tastet manuelt.</p>
-    <div class="actions-row">
-      <button class="btn" id="stravaConnectBtn">Forbind til Strava</button>
-      <button class="btn secondary small" id="stravaSyncBtn" style="display:none;">🔄 Hent nye løbeture</button>
-      <button class="btn secondary small" id="stravaDisconnectBtn" style="display:none;">Afbryd forbindelse</button>
-    </div>
-    <p class="hint" id="stravaStatus"></p>
-  </div>
+      <div class="card">
+        <h2>🌐 <span data-i18n="lang_heading"></span></h2>
+        <p class="sub" data-i18n="lang_sub"></p>
+        <div class="toggle-group">
+          <button class="toggle-btn" id="langDaBtn">Dansk</button>
+          <button class="toggle-btn" id="langEnBtn">English</button>
+        </div>
+      </div>
 
-  <!-- 5. Data -->
-  <div class="card">
-    <h2>💾 Data</h2>
-    <p class="sub">Tag en sikkerhedskopi af dine data, eller gendan fra en tidligere eksport.</p>
-    <div class="actions-row">
-      <button class="btn secondary small" id="exportBtn">⬇️ Eksportér data (JSON)</button>
-      <button class="btn secondary small" id="importBtn">⬆️ Importér data</button>
-      <input type="file" id="importFile" accept="application/json" style="display:none;">
-    </div>
-    <p class="hint" id="importStatus"></p>
-  </div>
+      <div class="card">
+        <h2>🎨 <span data-i18n="theme_heading"></span></h2>
+        <p class="sub" data-i18n="theme_sub"></p>
+        <div class="toggle-group">
+          <button class="toggle-btn" id="themeLightBtn" data-i18n="theme_light"></button>
+          <button class="toggle-btn" id="themeDarkBtn" data-i18n="theme_dark"></button>
+        </div>
+      </div>
 
-  <footer>Alle data gemmes lokalt i din browser (localStorage) — intet sendes til nettet.</footer>
+      <footer data-i18n="footer_text"></footer>
+    </div>
+  </section>
+
 </div>
 
 <script>
 const KM_PER_MILE = 1.609344;
 const STORAGE_KEY = "lobeokonomi-data-v1";
-const DEFAULT_TRIP_COUNT = 4;
+const LANG_KEY = "lobeokonomi-lang";
+const THEME_KEY = "lobeokonomi-theme";
 
-// --- Strava-integration: udfyld disse to efter opsætning (se worker/strava-worker.js) ---
+// --- Strava-integration: se worker/strava-worker.js ---
 const STRAVA_CLIENT_ID = "280932";
 const STRAVA_WORKER_URL = "https://running-economy.andreas-m-steiner.workers.dev";
 
+/* ---------- i18n ---------- */
+const STRINGS = {
+  da: {
+    page0: "Log", page1: "Værktøjer", page2: "Indstillinger",
+    log_heading: "Ugentlig log",
+    log_sub: "Automatisk opsummering pr. uge ud fra dine Strava-løbeture. Stigning og 10%-grænse beregnes ud fra ugen før.",
+    log_col_week: "Uge", log_col_start: "Start dato", log_col_end: "Slut dato",
+    log_col_actual: "Faktisk (km)", log_col_increase: "Stigning", log_col_allowed: "Tilladt (+10%)",
+    log_empty: "Ingen uger endnu — forbind Strava under Indstillinger for at hente dine løbeture.",
+    today_badge: "i dag",
+    overview_heading: "Oversigt",
+    overview_sub: "Samlet status på tværs af alle uger i loggen.",
+    stat_weeks: "Uger logget", stat_totalkm: "Km i alt", stat_longest_week: "Længste uge",
+    stat_longest_trip: "Længste tur", stat_avg_increase: "Gns. stigning",
+    trips_heading: "Ugens ture",
+    trips_sub: "Dine løbeture for ugen, hentet fra Strava. Brug pilene til at se andre uger.",
+    week_nav_today: "I dag",
+    goal_label: "Mål for ugen (km)", goal_placeholder: "fx 15",
+    trips_empty: "Ingen ture denne uge — forbind Strava under Indstillinger.",
+    trip_delete_title: "Slet tur",
+    trip_delete_confirm: "Slet turen ({label})?",
+    trip_generic: "Tur {n}",
+    stat_total_done: "Løbet i alt", stat_total_left: "Tilbage",
+    pace_heading: "Pace-beregner",
+    pace_sub: "Udfyld to felter, og tryk på den knap der matcher det du mangler.",
+    pace_label: "Pace (min/km, mm:ss)", pace_placeholder: "fx 5:30",
+    time_label: "Tid (hh:mm:ss eller mm:ss)", time_placeholder: "fx 45:00",
+    dist_label: "Distance (km)", dist_placeholder: "fx 10",
+    btn_calc_dist: "Beregn distance", btn_calc_time: "Beregn tid", btn_calc_pace: "Beregn pace", btn_clear: "Ryd",
+    err_dist: "Udfyld pace og tid korrekt (fx 5:30 og 45:00).",
+    err_time: "Udfyld pace og distance korrekt (fx 5:30 og 10).",
+    err_pace: "Udfyld tid og distance korrekt (fx 45:00 og 10).",
+    convert_heading: "Enhedskonvertering",
+    convert_sub: "1 mile = 1.609344 km. Skriv i et felt, det andet opdateres automatisk.",
+    km_label: "Kilometer", km_placeholder: "fx 10",
+    miles_label: "Miles", miles_placeholder: "fx 6.21",
+    pace_km_label: "Pace pr. km (mm:ss)", pace_km_placeholder: "fx 5:00",
+    pace_mile_label: "Pace pr. mile (mm:ss)", pace_mile_placeholder: "fx 8:03",
+    strava_heading: "Strava",
+    strava_sub: "Forbind din Strava-konto, så dine løbeture automatisk hentes ind i \"Ugens ture\".",
+    btn_strava_connect: "Forbind til Strava", btn_strava_sync: "🔄 Hent nye løbeture", btn_strava_disconnect: "Afbryd forbindelse",
+    strava_not_configured: "Strava-integrationen er endnu ikke sat op (mangler Client ID/Worker-URL).",
+    strava_connected: "Forbundet til Strava{name}.",
+    strava_connected_as: " som {name}",
+    strava_login_cancelled: "Strava-login blev afbrudt.",
+    strava_connecting: "Forbinder til Strava...",
+    strava_login_error: "Fejl ved Strava-login: {msg}",
+    strava_fetching: "Henter løbeture fra Strava...",
+    strava_imported: "{n} ny{suffix} løbetur{plural} importeret fra Strava.",
+    strava_none_new: "Ingen nye løbeture at hente fra Strava.",
+    strava_disconnect_confirm: "Afbryd forbindelsen til Strava? Allerede importerede ture bliver ikke slettet.",
+    strava_error: "Fejl: {msg}",
+    data_heading: "Data",
+    data_sub: "Tag en sikkerhedskopi af dine data, eller gendan fra en tidligere eksport.",
+    btn_export: "⬇️ Eksportér data (JSON)", btn_import: "⬆️ Importér data",
+    data_imported_at: "Data importeret kl. {time}",
+    data_import_error: "Kunne ikke importere: {msg}",
+    data_import_overwrite_confirm: "Dette overskriver dine nuværende data i denne browser. Fortsæt?",
+    lang_heading: "Sprog", lang_sub: "Vælg det sprog appen skal vises i.",
+    theme_heading: "Udseende", theme_sub: "Vælg mellem lyst og mørkt tema.",
+    theme_light: "Lyst", theme_dark: "Mørkt",
+    footer_text: "Alle data gemmes lokalt i din browser (localStorage) — intet sendes til nettet."
+  },
+  en: {
+    page0: "Log", page1: "Tools", page2: "Settings",
+    log_heading: "Weekly Log",
+    log_sub: "Automatic weekly summary based on your Strava runs. Increase and the 10% limit are calculated from the previous week.",
+    log_col_week: "Week", log_col_start: "Start date", log_col_end: "End date",
+    log_col_actual: "Actual (km)", log_col_increase: "Increase", log_col_allowed: "Allowed (+10%)",
+    log_empty: "No weeks yet — connect Strava under Settings to fetch your runs.",
+    today_badge: "today",
+    overview_heading: "Overview",
+    overview_sub: "Combined status across all weeks in the log.",
+    stat_weeks: "Weeks logged", stat_totalkm: "Total km", stat_longest_week: "Longest week",
+    stat_longest_trip: "Longest run", stat_avg_increase: "Avg. increase",
+    trips_heading: "This Week's Runs",
+    trips_sub: "Your runs for the week, fetched from Strava. Use the arrows to view other weeks.",
+    week_nav_today: "Today",
+    goal_label: "Goal for the week (km)", goal_placeholder: "e.g. 15",
+    trips_empty: "No runs this week — connect Strava under Settings.",
+    trip_delete_title: "Delete run",
+    trip_delete_confirm: "Delete the run ({label})?",
+    trip_generic: "Run {n}",
+    stat_total_done: "Total run", stat_total_left: "Remaining",
+    pace_heading: "Pace Calculator",
+    pace_sub: "Fill in two fields, then press the button matching what's missing.",
+    pace_label: "Pace (min/km, mm:ss)", pace_placeholder: "e.g. 5:30",
+    time_label: "Time (hh:mm:ss or mm:ss)", time_placeholder: "e.g. 45:00",
+    dist_label: "Distance (km)", dist_placeholder: "e.g. 10",
+    btn_calc_dist: "Calculate distance", btn_calc_time: "Calculate time", btn_calc_pace: "Calculate pace", btn_clear: "Clear",
+    err_dist: "Fill in pace and time correctly (e.g. 5:30 and 45:00).",
+    err_time: "Fill in pace and distance correctly (e.g. 5:30 and 10).",
+    err_pace: "Fill in time and distance correctly (e.g. 45:00 and 10).",
+    convert_heading: "Unit Conversion",
+    convert_sub: "1 mile = 1.609344 km. Type in one field, the other updates automatically.",
+    km_label: "Kilometers", km_placeholder: "e.g. 10",
+    miles_label: "Miles", miles_placeholder: "e.g. 6.21",
+    pace_km_label: "Pace per km (mm:ss)", pace_km_placeholder: "e.g. 5:00",
+    pace_mile_label: "Pace per mile (mm:ss)", pace_mile_placeholder: "e.g. 8:03",
+    strava_heading: "Strava",
+    strava_sub: "Connect your Strava account so your runs are automatically fetched into \"This Week's Runs\".",
+    btn_strava_connect: "Connect to Strava", btn_strava_sync: "🔄 Fetch new runs", btn_strava_disconnect: "Disconnect",
+    strava_not_configured: "The Strava integration isn't set up yet (missing Client ID/Worker URL).",
+    strava_connected: "Connected to Strava{name}.",
+    strava_connected_as: " as {name}",
+    strava_login_cancelled: "Strava login was cancelled.",
+    strava_connecting: "Connecting to Strava...",
+    strava_login_error: "Error during Strava login: {msg}",
+    strava_fetching: "Fetching runs from Strava...",
+    strava_imported: "{n} new run{plural} imported from Strava.",
+    strava_none_new: "No new runs to fetch from Strava.",
+    strava_disconnect_confirm: "Disconnect from Strava? Already imported runs won't be deleted.",
+    strava_error: "Error: {msg}",
+    data_heading: "Data",
+    data_sub: "Back up your data, or restore from a previous export.",
+    btn_export: "⬇️ Export data (JSON)", btn_import: "⬆️ Import data",
+    data_imported_at: "Data imported at {time}",
+    data_import_error: "Could not import: {msg}",
+    data_import_overwrite_confirm: "This will overwrite your current data in this browser. Continue?",
+    lang_heading: "Language", lang_sub: "Choose the language the app is displayed in.",
+    theme_heading: "Appearance", theme_sub: "Choose between light and dark theme.",
+    theme_light: "Light", theme_dark: "Dark",
+    footer_text: "All data is stored locally in your browser (localStorage) — nothing is sent to the internet."
+  }
+};
+
+let lang = localStorage.getItem(LANG_KEY) || "da";
+function t(key, vars){
+  let s = (STRINGS[lang] && STRINGS[lang][key]) ?? key;
+  if(vars) Object.entries(vars).forEach(([k,v]) => { s = s.split(`{${k}}`).join(v); });
+  return s;
+}
+function setLang(newLang){
+  lang = newLang;
+  localStorage.setItem(LANG_KEY, lang);
+  document.documentElement.lang = lang;
+  applyStaticTranslations();
+  renderAll();
+}
+function applyStaticTranslations(){
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  document.getElementById("pageLabel").textContent = t(`page${currentPageIndex()}`);
+  document.getElementById("langDaBtn").classList.toggle("active", lang === "da");
+  document.getElementById("langEnBtn").classList.toggle("active", lang === "en");
+}
+
+/* ---------- Tema ---------- */
+function applyTheme(theme){
+  document.body.setAttribute("data-theme", theme);
+  document.getElementById("themeColorMeta").content = theme === "light" ? "#f2f5f9" : "#0b1220";
+  document.getElementById("themeLightBtn").classList.toggle("active", theme === "light");
+  document.getElementById("themeDarkBtn").classList.toggle("active", theme === "dark");
+}
+function setTheme(theme){
+  localStorage.setItem(THEME_KEY, theme);
+  applyTheme(theme);
+}
+
+/* ---------- Dato-hjælpere ---------- */
 function toDateStr(d){
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth()+1).padStart(2,"0");
@@ -306,11 +548,11 @@ function toMonday(dateStr){
   d.setDate(d.getDate() + diff);
   return toDateStr(d);
 }
-function formatDaDate(dateStr){
+function formatDate(dateStr){
   const [y,m,d] = dateStr.split("-");
   return `${d}/${m}/${y}`;
 }
-function formatShortDaDate(dateStr){
+function formatShortDate(dateStr){
   const [, m, d] = dateStr.split("-");
   return `${d}/${m}`;
 }
@@ -323,39 +565,45 @@ function parseDecimal(str){
 }
 
 const CURRENT_WEEK_START = toMonday(toDateStr(new Date()));
-const CURRENT_WEEK_END = addDays(CURRENT_WEEK_START, 6);
 
+/* ---------- Data ---------- */
 function loadData(){
   let data = null;
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw) data = JSON.parse(raw);
   }catch(e){}
-  if(!data){
-    data = { weeks: [{start:"", actual:null}], tripsByWeek: {} };
-  }
+  if(!data) data = { tripsByWeek: {} };
   if(!data.tripsByWeek) data.tripsByWeek = {};
-  // migrer ældre format (ét globalt mål/ture) ind under den aktuelle uge
+
+  // migrer ældre format (globalt mål/ture uden ugenøgle)
   if(data.goal !== undefined || data.trips !== undefined){
     if(!data.tripsByWeek[CURRENT_WEEK_START]){
-      data.tripsByWeek[CURRENT_WEEK_START] = {
-        goal: data.goal ?? null,
-        trips: data.trips ?? Array(DEFAULT_TRIP_COUNT).fill(null)
-      };
+      data.tripsByWeek[CURRENT_WEEK_START] = { goal: data.goal ?? null, trips: data.trips ?? [] };
     }
     delete data.goal;
     delete data.trips;
   }
-  if(!Array.isArray(data.weeks)) data.weeks = [{start:"", actual:null}];
-  data.weeks.forEach(w => delete w.end); // 'end' beregnes altid, gemmes ikke længere
-  // trim overflødige, tomme tur-felter ned til standardantallet
+
+  // migrer ældre "Ugentlig log"-format (manuelt tastede uger) ind som ture
+  if(Array.isArray(data.weeks)){
+    data.weeks.forEach(w => {
+      if(!w.start) return;
+      const existing = data.tripsByWeek[w.start];
+      const hasTripData = existing && existing.trips.some(t => t !== null && t !== undefined && t !== "");
+      if(!hasTripData && w.actual !== null && w.actual !== undefined && w.actual !== ""){
+        if(!data.tripsByWeek[w.start]) data.tripsByWeek[w.start] = { goal: null, trips: [] };
+        data.tripsByWeek[w.start].trips.push(w.actual);
+      }
+    });
+    delete data.weeks;
+  }
+
+  // fjern tomme pladsholdere - der er ikke længere manuel indtastning
   Object.values(data.tripsByWeek).forEach(week => {
-    while(week.trips.length > DEFAULT_TRIP_COUNT){
-      const last = week.trips[week.trips.length-1];
-      if(last === null || last === undefined || last === "") week.trips.pop();
-      else break;
-    }
+    week.trips = week.trips.filter(t => t !== null && t !== undefined && t !== "");
   });
+
   if(!data.strava){
     data.strava = {accessToken:null, refreshToken:null, expiresAt:null, athleteName:null, importedIds:[]};
   }
@@ -369,16 +617,15 @@ function saveData(){
 
 function ensureWeek(weekStart){
   if(!data.tripsByWeek[weekStart]){
-    data.tripsByWeek[weekStart] = {goal: null, trips: Array(DEFAULT_TRIP_COUNT).fill(null)};
+    data.tripsByWeek[weekStart] = {goal: null, trips: []};
   }
   return data.tripsByWeek[weekStart];
 }
 let viewedWeekStart = CURRENT_WEEK_START;
 function viewedWeek(){ return ensureWeek(viewedWeekStart); }
 
-/* ---------- 1. Ugentlig log ---------- */
-// En tur er enten: null (tom plads), en ren værdi (manuelt tastet), eller
-// {value, date} (importeret fra Strava, med dato for turen).
+// En tur er enten en ren værdi (ældre/manuelt migreret data, ingen dato)
+// eller {value, date} (importeret fra Strava, med dato for turen).
 function tripValue(t){
   if(t === null || t === undefined) return null;
   return (typeof t === "object") ? t.value : t;
@@ -393,129 +640,68 @@ function weekTripsTotal(weekStart){
   if(nums.length === 0) return null;
   return nums.reduce((s,v) => s+v, 0);
 }
-function effectiveActual(i){
-  const w = data.weeks[i];
-  if(!w) return null;
-  const auto = w.start ? weekTripsTotal(w.start) : null;
-  if(auto !== null) return auto;
-  return parseDecimal(w.actual);
-}
-function baselineForRow(i){
-  return i > 0 ? effectiveActual(i-1) : null;
-}
-function computeDerivedHtml(i){
-  const actual = effectiveActual(i);
-  const baseline = baselineForRow(i);
-  let pctHtml = '<span class="pill neutral">–</span>';
-  let allowedHtml = '<span class="pill neutral">–</span>';
-  if(baseline !== null){
-    allowedHtml = `<span class="pill neutral">${(baseline*1.1).toFixed(2)} km</span>`;
-    if(actual !== null){
-      const pct = (actual/baseline - 1) * 100;
-      const cls = pct <= 10.0001 ? "ok" : "bad";
-      pctHtml = `<span class="pill ${cls}">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span>`;
-    }
-  }
-  return {pctHtml, allowedHtml};
+
+/* ---------- 1. Ugentlig log (afledt af Strava-data) ---------- */
+function getLoggedWeekKeys(){
+  return Object.keys(data.tripsByWeek)
+    .filter(k => weekTripsTotal(k) !== null)
+    .sort();
 }
 
 function renderLog(){
   const body = document.getElementById("logBody");
   body.innerHTML = "";
-  data.weeks.forEach((w, i) => {
+  const keys = getLoggedWeekKeys();
+
+  if(keys.length === 0){
     const tr = document.createElement("tr");
-    tr.dataset.row = i;
-    const isToday = w.start === CURRENT_WEEK_START;
-    if(isToday) tr.classList.add("today-row");
-
-    const end = w.start ? addDays(w.start, 6) : "";
-    const auto = w.start ? weekTripsTotal(w.start) : null;
-    const actualVal = auto !== null ? auto.toFixed(2) : (w.actual ?? "");
-    const { pctHtml, allowedHtml } = computeDerivedHtml(i);
-
-    tr.innerHTML = `
-      <td>${i+1}${isToday ? ' <span class="pill ok">i dag</span>' : ""}</td>
-      <td class="date-cell"><input type="date" data-i="${i}" data-field="start" value="${w.start||""}" title="Skal være en mandag"></td>
-      <td class="date-cell"><input type="date" data-i="${i}" data-field="end" value="${end}" disabled title="Beregnes automatisk (start + 6 dage)"></td>
-      <td class="num-cell"><input type="text" inputmode="decimal" data-i="${i}" data-field="actual" value="${actualVal}" placeholder="km" ${auto !== null ? "disabled" : ""} title="${auto !== null ? "Beregnes automatisk ud fra Ugens ture" : ""}"></td>
-      <td class="pct-cell">${pctHtml}</td>
-      <td class="allowed-cell">${allowedHtml}</td>
-      <td class="row-actions"><button class="icon-btn" data-del="${i}" title="Slet uge">✕</button></td>
-    `;
+    tr.innerHTML = `<td colspan="6" class="empty-state">${t("log_empty")}</td>`;
     body.appendChild(tr);
-  });
+    updateOverallStats();
+    return;
+  }
 
-  body.querySelectorAll('input[data-field="start"], input[data-field="actual"]').forEach(inp => {
-    inp.addEventListener("input", e => {
-      const i = parseInt(e.target.dataset.i);
-      const field = e.target.dataset.field;
-      let value = e.target.value === "" ? null : e.target.value;
-      if(field === "start" && value) value = toMonday(value);
-      data.weeks[i][field] = value;
-      saveData();
-      refreshLogDerived();
-    });
-  });
-  body.querySelectorAll("[data-del]").forEach(btn => {
-    btn.addEventListener("click", e => {
-      const i = parseInt(e.target.dataset.del);
-      const hasData = effectiveActual(i) !== null;
-      if(hasData && !confirm(`Slet uge ${i+1}? Dette kan ikke fortrydes.`)) return;
-      data.weeks.splice(i,1);
-      saveData();
-      renderLog();
-    });
-  });
-  updateOverallStats();
-}
+  keys.forEach((weekStart, i) => {
+    const actual = weekTripsTotal(weekStart);
+    const prevActual = i > 0 ? weekTripsTotal(keys[i-1]) : null;
+    const end = addDays(weekStart, 6);
+    const isToday = weekStart === CURRENT_WEEK_START;
 
-function refreshLogDerived(){
-  data.weeks.forEach((w, i) => {
-    const row = document.querySelector(`#logBody tr[data-row="${i}"]`);
-    if(!row) return;
-
-    const isToday = w.start === CURRENT_WEEK_START;
-    row.classList.toggle("today-row", isToday);
-    row.children[0].innerHTML = `${i+1}${isToday ? ' <span class="pill ok">i dag</span>' : ""}`;
-
-    const endInput = row.querySelector('[data-field="end"]');
-    if(endInput) endInput.value = w.start ? addDays(w.start, 6) : "";
-
-    const auto = w.start ? weekTripsTotal(w.start) : null;
-    const actualInput = row.querySelector('[data-field="actual"]');
-    if(actualInput){
-      if(auto !== null){
-        actualInput.disabled = true;
-        actualInput.title = "Beregnes automatisk ud fra Ugens ture";
-        actualInput.value = auto.toFixed(2);
-      } else {
-        actualInput.disabled = false;
-        actualInput.title = "";
-        if(document.activeElement !== actualInput){
-          actualInput.value = w.actual ?? "";
-        }
-      }
+    let pctHtml = '<span class="pill neutral">–</span>';
+    let allowedHtml = '<span class="pill neutral">–</span>';
+    if(prevActual !== null){
+      allowedHtml = `<span class="pill neutral">${(prevActual*1.1).toFixed(2)} km</span>`;
+      const pct = (actual/prevActual - 1) * 100;
+      const cls = pct <= 10.0001 ? "ok" : "bad";
+      pctHtml = `<span class="pill ${cls}">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span>`;
     }
 
-    const { pctHtml, allowedHtml } = computeDerivedHtml(i);
-    row.querySelector(".pct-cell").innerHTML = pctHtml;
-    row.querySelector(".allowed-cell").innerHTML = allowedHtml;
+    const tr = document.createElement("tr");
+    if(isToday) tr.classList.add("today-row");
+    tr.innerHTML = `
+      <td>${i+1}${isToday ? ` <span class="pill ok">${t("today_badge")}</span>` : ""}</td>
+      <td>${formatDate(weekStart)}</td>
+      <td>${formatDate(end)}</td>
+      <td>${actual.toFixed(2)}</td>
+      <td>${pctHtml}</td>
+      <td>${allowedHtml}</td>
+    `;
+    body.appendChild(tr);
   });
   updateOverallStats();
 }
 
 function updateOverallStats(){
-  const actuals = data.weeks.map((w,i) => effectiveActual(i)).filter(v => v !== null);
+  const keys = getLoggedWeekKeys();
+  const actuals = keys.map(k => weekTripsTotal(k));
   const totalKm = actuals.reduce((s,v) => s+v, 0);
   const longest = actuals.length ? Math.max(...actuals) : 0;
 
   let increases = [];
-  data.weeks.forEach((w,i) => {
-    const actual = effectiveActual(i);
-    const baseline = baselineForRow(i);
-    if(actual !== null && baseline !== null && baseline > 0){
-      increases.push((actual/baseline - 1) * 100);
-    }
+  keys.forEach((k, i) => {
+    if(i === 0) return;
+    const prev = actuals[i-1];
+    if(prev > 0) increases.push((actuals[i]/prev - 1) * 100);
   });
   const avgIncrease = increases.length ? increases.reduce((s,v) => s+v, 0) / increases.length : null;
 
@@ -530,67 +716,46 @@ function updateOverallStats(){
     avgIncrease === null ? "–" : (avgIncrease >= 0 ? "+" : "") + avgIncrease.toFixed(1) + "%";
 }
 
-document.getElementById("addWeekBtn").addEventListener("click", () => {
-  const last = data.weeks[data.weeks.length-1];
-  let nextStart = "";
-  if(last && last.start){
-    nextStart = toMonday(addDays(last.start, 7));
-  }
-  data.weeks.push({start: nextStart, actual:null});
-  saveData();
-  renderLog();
-});
-
-/* ---------- 2. Ugens ture ---------- */
+/* ---------- 2. Ugens ture (read-only, fra Strava) ---------- */
 function renderTrips(){
   const end = addDays(viewedWeekStart, 6);
   document.getElementById("weekRangeLabel").textContent =
-    `${formatDaDate(viewedWeekStart)} – ${formatDaDate(end)}`;
+    `${formatDate(viewedWeekStart)} – ${formatDate(end)}`;
 
   const week = viewedWeek();
   document.getElementById("weekGoal").value = week.goal ?? "";
   const list = document.getElementById("tripsList");
   list.innerHTML = "";
-  week.trips.forEach((t, i) => {
-    const row = document.createElement("div");
-    row.className = "trip-row";
-    const date = tripDate(t);
-    const label = date ? formatShortDaDate(date) : `Tur ${i+1}`;
-    row.innerHTML = `
-      <span title="${date ? formatDaDate(date) + " (Strava)" : ""}">${label}</span>
-      <input type="text" inputmode="decimal" data-i="${i}" value="${tripValue(t) ?? ""}" placeholder="km">
-      <button class="icon-btn" data-del="${i}" title="Slet tur">✕</button>
-    `;
-    list.appendChild(row);
-  });
-  list.querySelectorAll("input").forEach(inp => {
-    inp.addEventListener("input", e => {
-      const i = parseInt(e.target.dataset.i);
-      const trips = viewedWeek().trips;
-      const val = e.target.value;
-      if(val === ""){
-        trips[i] = null;
-      } else {
-        const existingDate = tripDate(trips[i]);
-        trips[i] = existingDate ? {value: val, date: existingDate} : val;
-      }
-      saveData();
-      updateTripStats();
-      refreshLogDerived();
+
+  if(week.trips.length === 0){
+    list.innerHTML = `<div class="empty-state">${t("trips_empty")}</div>`;
+  } else {
+    week.trips.forEach((trip, i) => {
+      const row = document.createElement("div");
+      row.className = "trip-row";
+      const date = tripDate(trip);
+      const label = date ? formatShortDate(date) : t("trip_generic", {n: i+1});
+      const value = tripValue(trip);
+      row.innerHTML = `
+        <span class="trip-label" title="${date ? formatDate(date) : ""}">${label}</span>
+        <span class="trip-value">${value} km</span>
+        <button class="icon-btn" data-del="${i}" title="${t("trip_delete_title")}">✕</button>
+      `;
+      list.appendChild(row);
     });
-  });
-  list.querySelectorAll("[data-del]").forEach(btn => {
-    btn.addEventListener("click", e => {
-      const i = parseInt(e.target.dataset.del);
-      const t = viewedWeek().trips[i];
-      const hasData = t !== null && t !== undefined && t !== "";
-      if(hasData && !confirm(`Slet tur ${i+1}?`)) return;
-      viewedWeek().trips.splice(i,1);
-      saveData();
-      renderTrips();
-      refreshLogDerived();
+    list.querySelectorAll("[data-del]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        const i = parseInt(e.target.dataset.del);
+        const trip = viewedWeek().trips[i];
+        const date = tripDate(trip);
+        const label = date ? formatDate(date) : t("trip_generic", {n: i+1});
+        if(!confirm(t("trip_delete_confirm", {label}))) return;
+        viewedWeek().trips.splice(i,1);
+        saveData();
+        renderAll();
+      });
     });
-  });
+  }
   updateTripStats();
 }
 
@@ -615,11 +780,6 @@ document.getElementById("weekGoal").addEventListener("input", e => {
   viewedWeek().goal = e.target.value === "" ? null : e.target.value;
   saveData();
   updateTripStats();
-});
-document.getElementById("addTripBtn").addEventListener("click", () => {
-  viewedWeek().trips.push(null);
-  saveData();
-  renderTrips();
 });
 document.getElementById("prevWeekBtn").addEventListener("click", () => {
   viewedWeekStart = addDays(viewedWeekStart, -7);
@@ -684,7 +844,7 @@ function paceError(msg){
 document.getElementById("calcDist").addEventListener("click", () => {
   const pace = parseMMSS(document.getElementById("paceInput").value);
   const time = parseHHMMSS(document.getElementById("timeInput").value);
-  if(pace === null || time === null || pace === 0){ paceError("Udfyld pace og tid korrekt (fx 5:30 og 45:00)."); return; }
+  if(pace === null || time === null || pace === 0){ paceError(t("err_dist")); return; }
   const dist = time / pace;
   document.getElementById("distInput").value = dist.toFixed(2);
   paceError("");
@@ -692,7 +852,7 @@ document.getElementById("calcDist").addEventListener("click", () => {
 document.getElementById("calcTime").addEventListener("click", () => {
   const pace = parseMMSS(document.getElementById("paceInput").value);
   const dist = parseDecimal(document.getElementById("distInput").value);
-  if(pace === null || dist === null){ paceError("Udfyld pace og distance korrekt (fx 5:30 og 10)."); return; }
+  if(pace === null || dist === null){ paceError(t("err_time")); return; }
   const time = pace * dist;
   document.getElementById("timeInput").value = formatHHMMSS(time);
   paceError("");
@@ -700,7 +860,7 @@ document.getElementById("calcTime").addEventListener("click", () => {
 document.getElementById("calcPace").addEventListener("click", () => {
   const time = parseHHMMSS(document.getElementById("timeInput").value);
   const dist = parseDecimal(document.getElementById("distInput").value);
-  if(time === null || dist === null || dist === 0){ paceError("Udfyld tid og distance korrekt (fx 45:00 og 10)."); return; }
+  if(time === null || dist === null || dist === 0){ paceError(t("err_pace")); return; }
   const pace = time / dist;
   document.getElementById("paceInput").value = formatMMSS(pace);
   paceError("");
@@ -751,9 +911,10 @@ function renderStravaStatus(){
   document.getElementById("stravaSyncBtn").style.display = connected ? "" : "none";
   document.getElementById("stravaDisconnectBtn").style.display = connected ? "" : "none";
   if(!stravaConfigured()){
-    stravaStatusMsg("Strava-integrationen er endnu ikke sat op (mangler Client ID/Worker-URL).");
+    stravaStatusMsg(t("strava_not_configured"));
   } else if(connected){
-    stravaStatusMsg("Forbundet til Strava" + (data.strava.athleteName ? ` som ${data.strava.athleteName}` : "") + ".");
+    const name = data.strava.athleteName ? t("strava_connected_as", {name: data.strava.athleteName}) : "";
+    stravaStatusMsg(t("strava_connected", {name}));
   } else {
     stravaStatusMsg("");
   }
@@ -761,7 +922,7 @@ function renderStravaStatus(){
 
 document.getElementById("stravaConnectBtn").addEventListener("click", () => {
   if(!stravaConfigured()){
-    stravaStatusMsg("Strava-integrationen er endnu ikke sat op (mangler Client ID/Worker-URL).");
+    stravaStatusMsg(t("strava_not_configured"));
     return;
   }
   const params = new URLSearchParams({
@@ -775,7 +936,7 @@ document.getElementById("stravaConnectBtn").addEventListener("click", () => {
 });
 
 document.getElementById("stravaDisconnectBtn").addEventListener("click", () => {
-  if(!confirm("Afbryd forbindelsen til Strava? Allerede importerede ture bliver ikke slettet.")) return;
+  if(!confirm(t("strava_disconnect_confirm"))) return;
   data.strava.accessToken = null;
   data.strava.refreshToken = null;
   data.strava.expiresAt = null;
@@ -793,23 +954,23 @@ async function handleStravaRedirect(){
   if(!code && !error) return;
   history.replaceState({}, "", stravaRedirectUri());
   if(error){
-    stravaStatusMsg("Strava-login blev afbrudt.");
+    stravaStatusMsg(t("strava_login_cancelled"));
     return;
   }
   if(!stravaConfigured()){
-    stravaStatusMsg("Strava-integrationen er endnu ikke sat op (mangler Client ID/Worker-URL).");
+    stravaStatusMsg(t("strava_not_configured"));
     return;
   }
   try{
-    stravaStatusMsg("Forbinder til Strava...");
+    stravaStatusMsg(t("strava_connecting"));
     const res = await fetch(`${STRAVA_WORKER_URL}/exchange`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({code})
     });
-    if(!res.ok) throw new Error(`serveren svarede ${res.status}`);
+    if(!res.ok) throw new Error(`server responded ${res.status}`);
     const tok = await res.json();
-    if(!tok.access_token) throw new Error(tok.message || "intet access token i svaret");
+    if(!tok.access_token) throw new Error(tok.message || "no access token in response");
     data.strava.accessToken = tok.access_token;
     data.strava.refreshToken = tok.refresh_token;
     data.strava.expiresAt = tok.expires_at;
@@ -818,7 +979,7 @@ async function handleStravaRedirect(){
     renderStravaStatus();
     await syncStravaRuns();
   }catch(err){
-    stravaStatusMsg("Fejl ved Strava-login: " + err.message);
+    stravaStatusMsg(t("strava_login_error", {msg: err.message}));
   }
 }
 
@@ -833,9 +994,9 @@ async function ensureStravaToken(){
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({refresh_token: data.strava.refreshToken})
   });
-  if(!res.ok) throw new Error(`kunne ikke forny login (${res.status})`);
+  if(!res.ok) throw new Error(`refresh failed (${res.status})`);
   const tok = await res.json();
-  if(!tok.access_token) throw new Error(tok.message || "intet access token i svaret");
+  if(!tok.access_token) throw new Error(tok.message || "no access token in response");
   data.strava.accessToken = tok.access_token;
   data.strava.refreshToken = tok.refresh_token;
   data.strava.expiresAt = tok.expires_at;
@@ -845,10 +1006,10 @@ async function ensureStravaToken(){
 
 async function syncStravaRuns(){
   if(!stravaConfigured()) return;
-  stravaStatusMsg("Henter løbeture fra Strava...");
+  stravaStatusMsg(t("strava_fetching"));
   try{
     const token = await ensureStravaToken();
-    if(!token) throw new Error("ikke forbundet til Strava endnu");
+    if(!token) throw new Error("not connected to Strava yet");
 
     const after = Math.floor(Date.now()/1000) - 90*24*3600; // seneste ~90 dage
     let page = 1, allActivities = [];
@@ -856,7 +1017,7 @@ async function syncStravaRuns(){
       const res = await fetch(`${STRAVA_WORKER_URL}/activities?after=${after}&page=${page}&per_page=100`, {
         headers: {"Authorization": `Bearer ${token}`}
       });
-      if(!res.ok) throw new Error(`kunne ikke hente aktiviteter (${res.status})`);
+      if(!res.ok) throw new Error(`could not fetch activities (${res.status})`);
       const batch = await res.json();
       allActivities = allActivities.concat(batch);
       if(!Array.isArray(batch) || batch.length < 100) break;
@@ -865,7 +1026,6 @@ async function syncStravaRuns(){
 
     const runs = allActivities.filter(a => a.type === "Run" || a.sport_type === "Run" || a.sport_type === "TrailRun");
 
-    // Grupér nye (ikke allerede importerede) løbeture pr. uge
     const newRunsByWeek = {};
     runs.forEach(run => {
       if(data.strava.importedIds.includes(run.id)) return;
@@ -877,8 +1037,6 @@ async function syncStravaRuns(){
     let imported = 0;
     Object.entries(newRunsByWeek).forEach(([weekStart, entries]) => {
       const week = ensureWeek(weekStart);
-      // fjern ubrugte, tomme standard-felter, så kun de rigtige ture vises
-      week.trips = week.trips.filter(t => t !== null && t !== undefined && t !== "");
       entries.sort((a,b) => a.dateLocal.localeCompare(b.dateLocal));
       entries.forEach(({run, dateLocal}) => {
         const km = run.distance / 1000;
@@ -889,18 +1047,21 @@ async function syncStravaRuns(){
     });
 
     saveData();
-    renderTrips();
-    refreshLogDerived();
+    renderAll();
     renderStravaStatus();
     stravaStatusMsg(imported > 0
-      ? `${imported} ny${imported === 1 ? "" : "e"} løbetur${imported === 1 ? "" : "e"} importeret fra Strava.`
-      : "Ingen nye løbeture at hente fra Strava.");
+      ? t("strava_imported", {
+          n: imported,
+          suffix: imported === 1 ? "" : "e",
+          plural: imported === 1 ? "" : (lang === "da" ? "e" : "s")
+        })
+      : t("strava_none_new"));
   }catch(err){
-    stravaStatusMsg("Fejl: " + err.message);
+    stravaStatusMsg(t("strava_error", {msg: err.message}));
   }
 }
 
-/* ---------- 5. Data (eksport/import) ---------- */
+/* ---------- Data (eksport/import) ---------- */
 document.getElementById("exportBtn").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
@@ -922,34 +1083,82 @@ document.getElementById("importFile").addEventListener("change", e => {
   reader.onload = () => {
     try{
       const imported = JSON.parse(reader.result);
-      if(!imported || !Array.isArray(imported.weeks) || typeof imported.tripsByWeek !== "object"){
-        throw new Error("filen har ikke det forventede format");
+      if(!imported || typeof imported.tripsByWeek !== "object"){
+        throw new Error("unexpected file format");
       }
-      if(!confirm("Dette overskriver dine nuværende data i denne browser. Fortsæt?")) return;
-      imported.weeks.forEach(w => delete w.end);
+      if(!confirm(t("data_import_overwrite_confirm"))) return;
       data = imported;
+      if(!data.strava) data.strava = {accessToken:null, refreshToken:null, expiresAt:null, athleteName:null, importedIds:[]};
+      Object.values(data.tripsByWeek).forEach(week => {
+        week.trips = week.trips.filter(tr => tr !== null && tr !== undefined && tr !== "");
+      });
       saveData();
       viewedWeekStart = CURRENT_WEEK_START;
-      renderLog();
-      renderTrips();
-      document.getElementById("importStatus").textContent = "Data importeret kl. " + new Date().toLocaleTimeString("da-DK");
+      renderAll();
+      renderStravaStatus();
+      document.getElementById("importStatus").textContent =
+        t("data_imported_at", {time: new Date().toLocaleTimeString(lang === "da" ? "da-DK" : "en-US")});
     }catch(err){
-      document.getElementById("importStatus").textContent = "Kunne ikke importere: " + err.message;
+      document.getElementById("importStatus").textContent = t("data_import_error", {msg: err.message});
     }
   };
   reader.readAsText(file);
   e.target.value = "";
 });
 
+/* ---------- Sidenavigation (swipe) ---------- */
+const pager = document.getElementById("pager");
+const dots = [...document.querySelectorAll(".dot")];
+function currentPageIndex(){
+  if(!pager.clientWidth) return 0;
+  return Math.round(pager.scrollLeft / pager.clientWidth);
+}
+function goToPage(i){
+  pager.scrollTo({left: i * pager.clientWidth, behavior: "smooth"});
+  // Opdatér prikker/label med det samme frem for udelukkende at vente på scroll-eventet
+  dots.forEach((d, idx) => d.classList.toggle("active", idx === i));
+  document.getElementById("pageLabel").textContent = t(`page${i}`);
+}
+function updatePageChrome(){
+  const i = currentPageIndex();
+  dots.forEach((d, idx) => d.classList.toggle("active", idx === i));
+  document.getElementById("pageLabel").textContent = t(`page${i}`);
+}
+document.getElementById("prevPageBtn").addEventListener("click", () => {
+  goToPage(Math.max(0, currentPageIndex() - 1));
+});
+document.getElementById("nextPageBtn").addEventListener("click", () => {
+  goToPage(Math.min(dots.length - 1, currentPageIndex() + 1));
+});
+dots.forEach((d, i) => d.addEventListener("click", () => goToPage(i)));
+let pagerScrollTimeout;
+pager.addEventListener("scroll", () => {
+  clearTimeout(pagerScrollTimeout);
+  pagerScrollTimeout = setTimeout(updatePageChrome, 60);
+});
+
+/* ---------- Sprog/tema-knapper ---------- */
+document.getElementById("langDaBtn").addEventListener("click", () => setLang("da"));
+document.getElementById("langEnBtn").addEventListener("click", () => setLang("en"));
+document.getElementById("themeLightBtn").addEventListener("click", () => setTheme("light"));
+document.getElementById("themeDarkBtn").addEventListener("click", () => setTheme("dark"));
+
 /* ---------- init ---------- */
-renderLog();
-renderTrips();
+function renderAll(){
+  renderLog();
+  renderTrips();
+}
+
+document.documentElement.lang = lang;
+applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+applyStaticTranslations();
+renderAll();
 renderStravaStatus();
 handleStravaRedirect();
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker kunne ikke registreres:", err));
+    navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker registration failed:", err));
   });
 }
 </script>
