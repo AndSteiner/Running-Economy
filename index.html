@@ -74,11 +74,19 @@
     min-width:100%;
     scroll-snap-align:start;
     overflow-y:auto;
-    padding:16px 16px 40px;
+    /* Ekstra bundplads så indhold aldrig gemmer sig bag den fast
+       positionerede bundbjælke. */
+    padding:16px 16px calc(84px + env(safe-area-inset-bottom));
   }
 
   .bottombar{
-    flex:0 0 auto;
+    /* Fast positioneret direkte til viewportet - uafhængig af body's
+       flex-layout og af om 100dvh-højden beregnes korrekt i et givent
+       øjeblik. Den kan simpelthen ikke forsvinde som følge af et layout-
+       problem andre steder på siden. */
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:100;
     display:flex;
     background:var(--card);
     border-top:1px solid var(--border);
@@ -510,7 +518,7 @@
 <script>
 // Bump denne ved hver ændring, der pushes - vises i Indstillinger, så det er
 // nemt at se om en telefon rent faktisk har hentet den nyeste version.
-const APP_VERSION = "2026-09-24.1";
+const APP_VERSION = "2026-09-24.2";
 const KM_PER_MILE = 1.609344;
 const STORAGE_KEY = "lobeokonomi-data-v1";
 const LANG_KEY = "lobeokonomi-lang";
