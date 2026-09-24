@@ -1528,7 +1528,9 @@ function renderPageOrderList(){
       localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(pageOrder));
       applyPageOrder();
       renderPageOrderList();
-      goToPage(0);
+      // Bliv på Indstillinger-siden, uanset hvor den nu ligger i rækkefølgen
+      pager.scrollTo({left: pageOrder.indexOf("settings") * pager.clientWidth, behavior: "instant"});
+      updatePageChrome();
     });
   });
 }
