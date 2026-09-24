@@ -15,8 +15,9 @@
 <style>
   :root{
     --accent:#0ea5e9;
-    --accent-2:#22c55e;
-    --danger:#ef4444;
+    --accent-2:#15803d;
+    --danger:#dc2626;
+    --chart-line:#0284c7;
   }
   :root, [data-theme="dark"]{
     --bg:#0b1220;
@@ -164,6 +165,18 @@
     border-radius:9px;padding:10px 14px;font-size:.85rem;font-weight:600;cursor:pointer;
   }
   .toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .chart-svg{width:100%;height:auto;display:block;overflow:visible;}
+  .chart-bar, .chart-dot{cursor:pointer;}
+  .chart-bar:hover, .chart-dot:hover{opacity:.8;}
+  .chart-legend{display:flex;gap:16px;margin-top:10px;font-size:.75rem;color:var(--muted);flex-wrap:wrap;}
+  .chart-legend .legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
+  .chart-tooltip{
+    position:absolute;display:none;pointer-events:none;z-index:50;
+    background:var(--card);border:1px solid var(--border);color:var(--text);
+    padding:4px 9px;border-radius:6px;font-size:.75rem;white-space:nowrap;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+  }
 </style>
 </head>
 <body data-theme="dark">
@@ -179,6 +192,7 @@
       <button class="dot active" data-page="0"></button>
       <button class="dot" data-page="1"></button>
       <button class="dot" data-page="2"></button>
+      <button class="dot" data-page="3"></button>
     </div>
     <button class="page-arrow" id="nextPageBtn" aria-label="Næste side">›</button>
   </div>
@@ -359,6 +373,27 @@
     </div>
   </section>
 
+  <!-- ================= SIDE 4: GRAFER ================= -->
+  <section class="page" data-page="3">
+    <div class="wrap">
+      <div class="card">
+        <h2>📈 <span data-i18n="chart_weekly_heading"></span></h2>
+        <p class="sub" data-i18n="chart_weekly_sub"></p>
+        <div id="weeklyChart"></div>
+        <div class="chart-legend">
+          <span><i class="legend-dot" style="background:var(--accent-2)"></i><span data-i18n="chart_legend_ok"></span></span>
+          <span><i class="legend-dot" style="background:var(--danger)"></i><span data-i18n="chart_legend_bad"></span></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📉 <span data-i18n="chart_cumulative_heading"></span></h2>
+        <p class="sub" data-i18n="chart_cumulative_sub"></p>
+        <div id="cumulativeChart"></div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <script>
@@ -374,7 +409,7 @@ const STRAVA_WORKER_URL = "https://running-economy.andreas-m-steiner.workers.dev
 /* ---------- i18n ---------- */
 const STRINGS = {
   da: {
-    page0: "Log", page1: "Værktøjer", page2: "Indstillinger",
+    page0: "Log", page1: "Værktøjer", page2: "Indstillinger", page3: "Grafer",
     log_heading: "Ugentlig log",
     log_sub: "Automatisk opsummering pr. uge ud fra dine Strava-løbeture. Stigning og 10%-grænse beregnes ud fra ugen før.",
     log_col_week: "Uge", log_col_start: "Start dato", log_col_end: "Slut dato",
@@ -433,10 +468,16 @@ const STRINGS = {
     lang_heading: "Sprog", lang_sub: "Vælg det sprog appen skal vises i.",
     theme_heading: "Udseende", theme_sub: "Vælg mellem lyst og mørkt tema.",
     theme_light: "Lyst", theme_dark: "Mørkt",
+    chart_weekly_heading: "Km pr. uge", chart_weekly_sub: "Søjlehøjde = km løbet den uge. Farve viser om stigningen holder sig inden for 10%-reglen.",
+    chart_cumulative_heading: "Samlet distance over tid", chart_cumulative_sub: "Akkumuleret antal km på tværs af alle uger.",
+    chart_legend_ok: "Inden for 10%", chart_legend_bad: "Over 10%",
+    charts_empty: "Ingen data endnu — forbind Strava under Indstillinger.",
+    chart_week_tooltip: "Uge {week}: {val} km",
+    chart_date_tooltip: "{date}: {val} km i alt",
     footer_text: "Alle data gemmes lokalt i din browser (localStorage) — intet sendes til nettet."
   },
   en: {
-    page0: "Log", page1: "Tools", page2: "Settings",
+    page0: "Log", page1: "Tools", page2: "Settings", page3: "Charts",
     log_heading: "Weekly Log",
     log_sub: "Automatic weekly summary based on your Strava runs. Increase and the 10% limit are calculated from the previous week.",
     log_col_week: "Week", log_col_start: "Start date", log_col_end: "End date",
@@ -495,6 +536,12 @@ const STRINGS = {
     lang_heading: "Language", lang_sub: "Choose the language the app is displayed in.",
     theme_heading: "Appearance", theme_sub: "Choose between light and dark theme.",
     theme_light: "Light", theme_dark: "Dark",
+    chart_weekly_heading: "Km per week", chart_weekly_sub: "Bar height = km run that week. Color shows whether the increase stayed within the 10% rule.",
+    chart_cumulative_heading: "Total distance over time", chart_cumulative_sub: "Cumulative km across all weeks.",
+    chart_legend_ok: "Within 10%", chart_legend_bad: "Over 10%",
+    charts_empty: "No data yet — connect Strava under Settings.",
+    chart_week_tooltip: "Week {week}: {val} km",
+    chart_date_tooltip: "{date}: {val} km total",
     footer_text: "All data is stored locally in your browser (localStorage) — nothing is sent to the internet."
   }
 };
@@ -534,6 +581,7 @@ function applyTheme(theme){
 function setTheme(theme){
   localStorage.setItem(THEME_KEY, theme);
   applyTheme(theme);
+  if(typeof renderCharts === "function") renderCharts();
 }
 
 /* ---------- Dato-hjælpere ---------- */
@@ -562,6 +610,17 @@ function formatDate(dateStr){
 function formatShortDate(dateStr){
   const [, m, d] = dateStr.split("-");
   return `${d}/${m}`;
+}
+// ISO 8601-ugenummer (samme som ugenr.dk) for en given dato.
+function isoWeekNumber(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  const dayNr = (d.getDay() + 6) % 7; // mandag=0 ... søndag=6
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() - dayNr + 3);
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+  const firstDayNr = (firstThursday.getDay() + 6) % 7;
+  firstThursday.setDate(firstThursday.getDate() - firstDayNr + 3);
+  return 1 + Math.round((thursday - firstThursday) / (7*24*3600*1000));
 }
 function parseDecimal(str){
   if(str === null || str === undefined) return null;
@@ -655,12 +714,26 @@ function getLoggedWeekKeys(){
     .sort();
 }
 
+// Sammenhængende ugerække (ingen huller) fra den første uge med data til nu,
+// så uger uden løbeture (0 km) også vises i stedet for bare at forsvinde.
+function getWeekRange(){
+  const logged = getLoggedWeekKeys();
+  if(logged.length === 0) return [];
+  const range = [];
+  let cursor = logged[0];
+  while(cursor <= CURRENT_WEEK_START){
+    range.push(cursor);
+    cursor = addDays(cursor, 7);
+  }
+  return range;
+}
+
 function renderLog(){
   const body = document.getElementById("logBody");
   body.innerHTML = "";
-  const keys = getLoggedWeekKeys();
+  const range = getWeekRange(); // kronologisk (ældst → nyest)
 
-  if(keys.length === 0){
+  if(range.length === 0){
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="6" class="empty-state">${t("log_empty")}</td>`;
     body.appendChild(tr);
@@ -668,15 +741,19 @@ function renderLog(){
     return;
   }
 
-  keys.forEach((weekStart, i) => {
-    const actual = weekTripsTotal(weekStart);
-    const prevActual = i > 0 ? weekTripsTotal(keys[i-1]) : null;
+  const values = range.map(k => weekTripsTotal(k) ?? 0);
+
+  // Nyeste uge øverst
+  for(let i = range.length - 1; i >= 0; i--){
+    const weekStart = range[i];
+    const actual = values[i];
+    const prevActual = i > 0 ? values[i-1] : null;
     const end = addDays(weekStart, 6);
     const isToday = weekStart === CURRENT_WEEK_START;
 
     let pctHtml = '<span class="pill neutral">–</span>';
     let allowedHtml = '<span class="pill neutral">–</span>';
-    if(prevActual !== null){
+    if(prevActual !== null && prevActual > 0){
       allowedHtml = `<span class="pill neutral">${(prevActual*1.1).toFixed(2)} km</span>`;
       const pct = (actual/prevActual - 1) * 100;
       const cls = pct <= 10.0001 ? "ok" : "bad";
@@ -686,7 +763,7 @@ function renderLog(){
     const tr = document.createElement("tr");
     if(isToday) tr.classList.add("today-row");
     tr.innerHTML = `
-      <td>${i+1}${isToday ? ` <span class="pill ok">${t("today_badge")}</span>` : ""}</td>
+      <td>${isoWeekNumber(weekStart)}${isToday ? ` <span class="pill ok">${t("today_badge")}</span>` : ""}</td>
       <td>${formatDate(weekStart)}</td>
       <td>${formatDate(end)}</td>
       <td>${actual.toFixed(2)}</td>
@@ -694,7 +771,7 @@ function renderLog(){
       <td>${allowedHtml}</td>
     `;
     body.appendChild(tr);
-  });
+  }
   updateOverallStats();
 }
 
@@ -815,6 +892,154 @@ document.getElementById("todayWeekBtn").addEventListener("click", () => {
   viewedWeekStart = CURRENT_WEEK_START;
   renderTrips();
 });
+
+/* ---------- Grafer ---------- */
+function cssVar(name){
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+function ensureChartTooltip(){
+  let el = document.getElementById("chartTooltip");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "chartTooltip";
+    el.className = "chart-tooltip";
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function showChartTooltip(evt, text){
+  const el = ensureChartTooltip();
+  el.textContent = text;
+  el.style.display = "block";
+  el.style.left = (evt.pageX + 12) + "px";
+  el.style.top = (evt.pageY - 28) + "px";
+}
+function hideChartTooltip(){
+  const el = document.getElementById("chartTooltip");
+  if(el) el.style.display = "none";
+}
+
+function renderWeeklyChart(){
+  const container = document.getElementById("weeklyChart");
+  if(!container) return;
+  const range = getWeekRange();
+  if(range.length === 0){
+    container.innerHTML = `<div class="empty-state">${t("charts_empty")}</div>`;
+    return;
+  }
+  const values = range.map(k => weekTripsTotal(k) ?? 0);
+  const max = Math.max(...values, 1);
+
+  const W = 600, H = 220, padL = 32, padB = 22, padT = 10, padR = 8;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const gap = 4;
+  const barW = Math.max(3, plotW / range.length - gap);
+
+  const okColor = cssVar("--accent-2");
+  const badColor = cssVar("--danger");
+  const neutralColor = cssVar("--muted");
+  const gridColor = cssVar("--border");
+  const textColor = cssVar("--muted");
+
+  let gridSvg = "";
+  for(let i=0;i<=3;i++){
+    const y = padT + plotH - (plotH*i/3);
+    const val = max*i/3;
+    gridSvg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="${gridColor}" stroke-width="1"/>`;
+    gridSvg += `<text x="${padL-5}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="${textColor}">${val.toFixed(0)}</text>`;
+  }
+
+  const labelEvery = Math.max(1, Math.ceil(range.length / 12));
+  let barsSvg = "";
+  range.forEach((weekStart, i) => {
+    const val = values[i];
+    const prevVal = i > 0 ? values[i-1] : null;
+    let color = neutralColor;
+    if(prevVal !== null && prevVal > 0){
+      const pct = (val/prevVal - 1) * 100;
+      color = pct <= 10.0001 ? okColor : badColor;
+    }
+    const barH = max > 0 ? (val/max) * plotH : 0;
+    const x = padL + i * (barW + gap);
+    const y = padT + plotH - barH;
+    barsSvg += `<rect class="chart-bar" data-week="${weekStart}" data-val="${val.toFixed(2)}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(barH,1).toFixed(1)}" rx="3" fill="${color}"></rect>`;
+    if(i % labelEvery === 0 || i === range.length-1){
+      barsSvg += `<text x="${(x+barW/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="8" fill="${textColor}">${isoWeekNumber(weekStart)}</text>`;
+    }
+  });
+
+  container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet">${gridSvg}${barsSvg}</svg>`;
+
+  container.querySelectorAll(".chart-bar").forEach(bar => {
+    bar.addEventListener("mouseenter", evt => {
+      showChartTooltip(evt, t("chart_week_tooltip", {week: isoWeekNumber(bar.dataset.week), val: bar.dataset.val}));
+    });
+    bar.addEventListener("mousemove", evt => showChartTooltip(evt, ensureChartTooltip().textContent));
+    bar.addEventListener("mouseleave", hideChartTooltip);
+  });
+}
+
+function renderCumulativeChart(){
+  const container = document.getElementById("cumulativeChart");
+  if(!container) return;
+  const range = getWeekRange();
+  if(range.length === 0){
+    container.innerHTML = `<div class="empty-state">${t("charts_empty")}</div>`;
+    return;
+  }
+  const values = range.map(k => weekTripsTotal(k) ?? 0);
+  let cum = 0;
+  const cumValues = values.map(v => (cum += v));
+  const max = Math.max(...cumValues, 1);
+
+  const W = 600, H = 220, padL = 38, padB = 22, padT = 10, padR = 8;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const stepX = range.length > 1 ? plotW/(range.length-1) : 0;
+
+  const accent = cssVar("--chart-line");
+  const gridColor = cssVar("--border");
+  const textColor = cssVar("--muted");
+
+  let gridSvg = "";
+  for(let i=0;i<=3;i++){
+    const y = padT + plotH - (plotH*i/3);
+    const val = max*i/3;
+    gridSvg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="${gridColor}" stroke-width="1"/>`;
+    gridSvg += `<text x="${padL-5}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="${textColor}">${val.toFixed(0)}</text>`;
+  }
+
+  const points = cumValues.map((v,i) => ({
+    x: padL + i*stepX,
+    y: padT + plotH - (v/max)*plotH,
+    v, weekStart: range[i]
+  }));
+  const pathD = points.map((p,i) => `${i===0?"M":"L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const areaD = `${pathD} L${points[points.length-1].x.toFixed(1)},${(padT+plotH).toFixed(1)} L${points[0].x.toFixed(1)},${(padT+plotH).toFixed(1)} Z`;
+  const dotsSvg = points.map(p =>
+    `<circle class="chart-dot" data-week="${p.weekStart}" data-val="${p.v.toFixed(2)}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${accent}"></circle>`
+  ).join("");
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet">
+      ${gridSvg}
+      <path d="${areaD}" fill="${accent}" opacity="0.12" stroke="none"></path>
+      <path d="${pathD}" fill="none" stroke="${accent}" stroke-width="2"></path>
+      ${dotsSvg}
+    </svg>`;
+
+  container.querySelectorAll(".chart-dot").forEach(dot => {
+    dot.addEventListener("mouseenter", evt => {
+      showChartTooltip(evt, t("chart_date_tooltip", {date: formatDate(dot.dataset.week), val: dot.dataset.val}));
+    });
+    dot.addEventListener("mousemove", evt => showChartTooltip(evt, ensureChartTooltip().textContent));
+    dot.addEventListener("mouseleave", hideChartTooltip);
+  });
+}
+
+function renderCharts(){
+  renderWeeklyChart();
+  renderCumulativeChart();
+}
 
 /* ---------- 3. Pace-beregner ---------- */
 function parseMMSS(str){
@@ -1169,6 +1394,7 @@ document.getElementById("themeDarkBtn").addEventListener("click", () => setTheme
 function renderAll(){
   renderLog();
   renderTrips();
+  renderCharts();
 }
 
 document.documentElement.lang = lang;
