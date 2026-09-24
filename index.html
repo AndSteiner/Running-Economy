@@ -1851,6 +1851,15 @@ if("serviceWorker" in navigator){
   // skipWaiting), genindlæser vi siden automatisk én gang, så opdateringer
   // rammer med det samme i stedet for at kræve manuel cache-rydning.
   let swRefreshing = false;
+  // Lige efter en manuel "Ryd cache og genindlæs" registrerer den friske
+  // side en helt ny service worker, som selv aktiverer sig og udløser endnu
+  // et controllerchange - uden dette flag ville det give et uønsket ekstra
+  // genindlæs oveni det brugeren selv bad om, med risiko for at ramme en
+  // ufærdig mellemtilstand undervejs.
+  if(sessionStorage.getItem("lobeokonomi-skip-sw-reload")){
+    sessionStorage.removeItem("lobeokonomi-skip-sw-reload");
+    swRefreshing = true;
+  }
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if(swRefreshing) return;
     swRefreshing = true;
@@ -1888,6 +1897,7 @@ async function clearAppCacheAndReload(){
   }catch(e){
     console.warn("Kunne ikke rydde cache fuldstændigt:", e);
   }
+  sessionStorage.setItem("lobeokonomi-skip-sw-reload", "1");
   try{
     // location.reload() kan stadig blive besvaret af browserens almindelige
     // HTTP-cache (adskilt fra Service Worker-cachen vi lige ryddede), og så
