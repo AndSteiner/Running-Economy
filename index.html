@@ -125,9 +125,9 @@
     display:flex;align-items:center;gap:8px;
   }
   .card .sub{color:var(--muted);font-size:.82rem;margin:0 0 16px;}
-  table{width:100%;border-collapse:collapse;font-size:.85rem;}
-  th,td{padding:6px 6px;text-align:left;white-space:nowrap;}
-  th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border);}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;}
+  th,td{padding:6px 3px;text-align:left;white-space:nowrap;}
+  th{color:var(--muted);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.02em;border-bottom:1px solid var(--border);}
   tbody tr{border-bottom:1px solid var(--border);}
   tbody tr:last-child{border-bottom:none;}
   tbody tr.today-row{background:color-mix(in srgb, var(--accent) 10%, transparent);}
@@ -159,7 +159,7 @@
   .page-order-item .drag-handle:active{cursor:grabbing;}
   .page-order-item .page-order-label{flex:1;}
   .pill{
-    display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600;
+    display:inline-block;padding:2px 6px;border-radius:999px;font-size:.72rem;font-weight:600;
   }
   .pill.ok{background:color-mix(in srgb, var(--accent-2) 18%, transparent);color:var(--accent-2);}
   .pill.bad{background:color-mix(in srgb, var(--danger) 18%, transparent);color:var(--danger);}
@@ -180,10 +180,6 @@
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
   .field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px;}
-  .goal-readonly{
-    background:var(--card-2);border:1px solid var(--border);border-radius:8px;
-    padding:7px 10px;font-size:.85rem;color:var(--text);
-  }
   @media(max-width:560px){.grid-2,.grid-3{grid-template-columns:1fr;}}
 
   .week-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
@@ -217,7 +213,7 @@
   }
   .toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 
-  .chart-svg{width:100%;height:auto;display:block;overflow:visible;}
+  .chart-svg{width:100%;height:auto;display:block;overflow:hidden;}
   .chart-bar, .chart-dot{cursor:pointer;}
   .chart-bar:hover, .chart-dot:hover{opacity:.8;}
   .chart-legend{display:flex;gap:16px;margin-top:10px;font-size:.75rem;color:var(--muted);flex-wrap:wrap;}
@@ -252,8 +248,7 @@
             <thead>
               <tr>
                 <th data-i18n="log_col_week"></th>
-                <th data-i18n="log_col_start"></th>
-                <th data-i18n="log_col_end"></th>
+                <th data-i18n="log_col_period"></th>
                 <th data-i18n="log_col_actual"></th>
                 <th data-i18n="log_col_increase"></th>
                 <th data-i18n="log_col_allowed"></th>
@@ -285,14 +280,8 @@
           <button class="btn secondary small" id="nextWeekBtn">→</button>
           <button class="btn secondary small" id="todayWeekBtn" style="margin-left:auto;" data-i18n="week_nav_today"></button>
         </div>
-        <div class="grid-2">
-          <div class="field">
-            <label for="weekGoal" data-i18n="goal_label"></label>
-            <input type="text" inputmode="decimal" id="weekGoal" data-i18n-placeholder="goal_placeholder">
-            <div class="goal-readonly" id="goalReadonly" style="display:none;"></div>
-          </div>
-        </div>
         <div class="trips-list" id="tripsList"></div>
+        <p class="hint" id="goalNote"></p>
         <div class="progress-wrap">
           <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
           <div class="progress-labels">
@@ -303,6 +292,7 @@
         <div class="stat-row">
           <div class="stat"><div class="label" data-i18n="stat_total_done"></div><div class="value" id="totalDone">0 km</div></div>
           <div class="stat"><div class="label" data-i18n="stat_total_left"></div><div class="value" id="totalLeft">0 km</div></div>
+          <div class="stat"><div class="label" data-i18n="stat_total_time"></div><div class="value" id="totalTime">–</div></div>
         </div>
       </div>
     </div>
@@ -489,6 +479,15 @@
     <button class="modal-close" data-close-modal>✕</button>
     <h2>📈 <span data-i18n="chart_settings_heading"></span></h2>
     <p class="sub" data-i18n="chart_settings_sub"></p>
+    <div class="actions-row" id="chartPresets">
+      <button class="btn secondary small" data-preset="week" data-i18n="preset_week"></button>
+      <button class="btn secondary small" data-preset="month" data-i18n="preset_month"></button>
+      <button class="btn secondary small" data-preset="lastMonth" data-i18n="preset_last_month"></button>
+      <button class="btn secondary small" data-preset="year" data-i18n="preset_year"></button>
+      <button class="btn secondary small" data-preset="lastYear" data-i18n="preset_last_year"></button>
+      <button class="btn secondary small" data-preset="all" data-i18n="preset_all"></button>
+    </div>
+    <p class="hint" data-i18n="chart_custom_range_hint"></p>
     <div class="grid-2">
       <div class="field">
         <label for="chartFromDate" data-i18n="chart_from_label"></label>
@@ -498,9 +497,6 @@
         <label for="chartToDate" data-i18n="chart_to_label"></label>
         <input type="date" id="chartToDate">
       </div>
-    </div>
-    <div class="actions-row">
-      <button class="btn secondary small" id="chartRangeResetBtn" data-i18n="chart_range_reset"></button>
     </div>
   </div>
 </div>
@@ -532,9 +528,10 @@ const STRINGS = {
     page_log: "Log", page_tools: "Værktøjer", page_settings: "Indstillinger", page_charts: "Grafer",
     log_heading: "Ugentlig log",
     log_sub: "Automatisk opsummering pr. uge ud fra dine Strava-løbeture. Stigning og 10%-grænse beregnes ud fra ugen før.",
-    log_col_week: "Uge", log_col_start: "Start dato", log_col_end: "Slut dato",
-    log_col_actual: "Faktisk (km)", log_col_increase: "Stigning", log_col_allowed: "Tilladt (+10%)",
+    log_col_week: "Uge", log_col_period: "Periode",
+    log_col_actual: "Km", log_col_increase: "Stigning", log_col_allowed: "Tilladt",
     log_empty: "Ingen uger endnu — forbind Strava under Indstillinger for at hente dine løbeture.",
+    log_empty_connected: "Ingen løbeture registreret endnu. Tryk \"Hent nye løbeture\" under Indstillinger → Strava.",
     today_badge: "i dag",
     overview_heading: "Oversigt",
     overview_sub: "Samlet status på tværs af alle uger i loggen.",
@@ -543,11 +540,12 @@ const STRINGS = {
     trips_heading: "Ugens ture",
     trips_sub: "Dine løbeture for ugen, hentet fra Strava. Brug pilene til at se andre uger.",
     week_nav_today: "I dag",
-    goal_label: "Mål for ugen (km)", goal_placeholder: "fx 15",
-    goal_not_set: "intet mål sat",
+    goal_note: "Mål: {goal} km (10% mere end ugen før)",
+    goal_note_none: "Intet mål endnu — mangler data for ugen før.",
+    stat_total_time: "Tid i alt",
+    trip_pace: "{pace} min/km", trip_no_time: "",
     trips_empty: "Ingen ture denne uge — forbind Strava under Indstillinger.",
-    trip_delete_title: "Slet tur",
-    trip_delete_confirm: "Slet turen ({label})?",
+    trips_empty_connected: "Ingen ture registreret denne uge.",
     trip_generic: "Tur {n}",
     stat_total_done: "Løbet i alt", stat_total_left: "Tilbage",
     pace_heading: "Pace-beregner",
@@ -600,16 +598,20 @@ const STRINGS = {
     log_settings_heading: "Ugentlig log", log_settings_sub: "Vælg hvor mange af de seneste uger loggen skal vise.",
     log_weeks_limit_label: "Antal uger vist", log_weeks_limit_all: "Alle",
     chart_settings_heading: "Grafer", chart_settings_sub: "Begræns hvilke uger graferne viser. Lad stå tomt for at se alt.",
-    chart_from_label: "Fra uge (dato)", chart_to_label: "Til uge (dato)", chart_range_reset: "Nulstil periode",
+    chart_from_label: "Fra uge (dato)", chart_to_label: "Til uge (dato)",
+    chart_custom_range_hint: "Eller vælg en brugerdefineret periode:",
+    preset_week: "Denne uge", preset_month: "Denne måned", preset_last_month: "Sidste måned",
+    preset_year: "Dette år", preset_last_year: "Sidste år", preset_all: "Alle",
     footer_text: "Alle data gemmes lokalt i din browser (localStorage) — intet sendes til nettet."
   },
   en: {
     page_log: "Log", page_tools: "Tools", page_settings: "Settings", page_charts: "Charts",
     log_heading: "Weekly Log",
     log_sub: "Automatic weekly summary based on your Strava runs. Increase and the 10% limit are calculated from the previous week.",
-    log_col_week: "Week", log_col_start: "Start date", log_col_end: "End date",
-    log_col_actual: "Actual (km)", log_col_increase: "Increase", log_col_allowed: "Allowed (+10%)",
+    log_col_week: "Week", log_col_period: "Period",
+    log_col_actual: "Km", log_col_increase: "Increase", log_col_allowed: "Allowed",
     log_empty: "No weeks yet — connect Strava under Settings to fetch your runs.",
+    log_empty_connected: "No runs recorded yet. Tap \"Fetch new runs\" under Settings → Strava.",
     today_badge: "today",
     overview_heading: "Overview",
     overview_sub: "Combined status across all weeks in the log.",
@@ -618,11 +620,12 @@ const STRINGS = {
     trips_heading: "This Week's Runs",
     trips_sub: "Your runs for the week, fetched from Strava. Use the arrows to view other weeks.",
     week_nav_today: "Today",
-    goal_label: "Goal for the week (km)", goal_placeholder: "e.g. 15",
-    goal_not_set: "no goal set",
+    goal_note: "Goal: {goal} km (10% more than the week before)",
+    goal_note_none: "No goal yet — missing data for the week before.",
+    stat_total_time: "Total time",
+    trip_pace: "{pace} min/km", trip_no_time: "",
     trips_empty: "No runs this week — connect Strava under Settings.",
-    trip_delete_title: "Delete run",
-    trip_delete_confirm: "Delete the run ({label})?",
+    trips_empty_connected: "No runs recorded this week.",
     trip_generic: "Run {n}",
     stat_total_done: "Total run", stat_total_left: "Remaining",
     pace_heading: "Pace Calculator",
@@ -675,7 +678,10 @@ const STRINGS = {
     log_settings_heading: "Weekly Log", log_settings_sub: "Choose how many of the most recent weeks the log should show.",
     log_weeks_limit_label: "Number of weeks shown", log_weeks_limit_all: "All",
     chart_settings_heading: "Charts", chart_settings_sub: "Limit which weeks the charts show. Leave empty to see everything.",
-    chart_from_label: "From week (date)", chart_to_label: "To week (date)", chart_range_reset: "Reset range",
+    chart_from_label: "From week (date)", chart_to_label: "To week (date)",
+    chart_custom_range_hint: "Or pick a custom range:",
+    preset_week: "This week", preset_month: "This month", preset_last_month: "Last month",
+    preset_year: "This year", preset_last_year: "Last year", preset_all: "All",
     footer_text: "All data is stored locally in your browser (localStorage) — nothing is sent to the internet."
   }
 };
@@ -826,13 +832,25 @@ let viewedWeekStart = CURRENT_WEEK_START;
 function viewedWeek(){ return ensureWeek(viewedWeekStart); }
 
 // En tur er enten en ren værdi (ældre/manuelt migreret data, ingen dato)
-// eller {value, date} (importeret fra Strava, med dato for turen).
+// eller {value, date, seconds} (importeret fra Strava, med dato og varighed).
 function tripValue(t){
   if(t === null || t === undefined) return null;
   return (typeof t === "object") ? t.value : t;
 }
 function tripDate(t){
   return (t && typeof t === "object") ? t.date : null;
+}
+function tripSeconds(t){
+  return (t && typeof t === "object" && typeof t.seconds === "number") ? t.seconds : null;
+}
+function formatDuration(totalSeconds){
+  if(totalSeconds === null || isNaN(totalSeconds) || totalSeconds < 0) return null;
+  const s = Math.round(totalSeconds);
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  if(h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+  return `${m}:${String(sec).padStart(2,"0")}`;
 }
 function weekTripsTotal(weekStart){
   const w = data.tripsByWeek[weekStart];
@@ -879,7 +897,8 @@ function renderLog(){
 
   if(range.length === 0){
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="6" class="empty-state">${t("log_empty")}</td>`;
+    const emptyKey = data.strava.refreshToken ? "log_empty_connected" : "log_empty";
+    tr.innerHTML = `<td colspan="5" class="empty-state">${t(emptyKey)}</td>`;
     body.appendChild(tr);
     updateOverallStats();
     return;
@@ -900,7 +919,7 @@ function renderLog(){
     let pctHtml = '<span class="pill neutral">–</span>';
     let allowedHtml = '<span class="pill neutral">–</span>';
     if(prevActual !== null && prevActual > 0){
-      allowedHtml = `<span class="pill neutral">${(prevActual*1.1).toFixed(2)} km</span>`;
+      allowedHtml = `<span class="pill neutral">${(prevActual*1.1).toFixed(1)}</span>`;
       const pct = (actual/prevActual - 1) * 100;
       const cls = pct <= 10.0001 ? "ok" : "bad";
       pctHtml = `<span class="pill ${cls}">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span>`;
@@ -910,9 +929,8 @@ function renderLog(){
     if(isToday) tr.classList.add("today-row");
     tr.innerHTML = `
       <td>${isoWeekNumber(weekStart)}${isToday ? ` <span class="pill ok">${t("today_badge")}</span>` : ""}</td>
-      <td>${formatDate(weekStart)}</td>
-      <td>${formatDate(end)}</td>
-      <td>${actual.toFixed(2)}</td>
+      <td>${formatShortDate(weekStart)}–${formatShortDate(end)}</td>
+      <td>${actual.toFixed(1)}</td>
       <td>${pctHtml}</td>
       <td>${allowedHtml}</td>
     `;
@@ -947,33 +965,25 @@ function updateOverallStats(){
 }
 
 /* ---------- 2. Ugens ture (read-only, fra Strava) ---------- */
+// Målet er altid 10% mere end den faktiske km-mængde ugen før - aldrig
+// manuelt sat - så det matcher 10%-reglen i Ugentlig log.
+function computedGoalFor(weekStart){
+  const prevActual = weekTripsTotal(addDays(weekStart, -7));
+  return prevActual !== null ? prevActual * 1.1 : null;
+}
+
 function renderTrips(){
   const end = addDays(viewedWeekStart, 6);
   document.getElementById("weekRangeLabel").textContent =
     `${formatDate(viewedWeekStart)} – ${formatDate(end)}`;
 
   const week = viewedWeek();
-  const goalInput = document.getElementById("weekGoal");
-  const goalReadonly = document.getElementById("goalReadonly");
-  const isPast = viewedWeekStart < CURRENT_WEEK_START;
-  if(isPast){
-    const total = week.trips.reduce((sum, tr) => sum + (parseDecimal(tripValue(tr)) || 0), 0);
-    const goalVal = parseDecimal(week.goal);
-    goalReadonly.textContent = goalVal !== null
-      ? `${total.toFixed(2)} / ${goalVal.toFixed(2)} km`
-      : `${total.toFixed(2)} km (${t("goal_not_set")})`;
-    goalInput.style.display = "none";
-    goalReadonly.style.display = "";
-  } else {
-    goalInput.value = week.goal ?? "";
-    goalInput.style.display = "";
-    goalReadonly.style.display = "none";
-  }
   const list = document.getElementById("tripsList");
   list.innerHTML = "";
 
   if(week.trips.length === 0){
-    list.innerHTML = `<div class="empty-state">${t("trips_empty")}</div>`;
+    const emptyKey = data.strava.refreshToken ? "trips_empty_connected" : "trips_empty";
+    list.innerHTML = `<div class="empty-state">${t(emptyKey)}</div>`;
   } else {
     week.trips.forEach((trip, i) => {
       const row = document.createElement("div");
@@ -981,24 +991,22 @@ function renderTrips(){
       const date = tripDate(trip);
       const label = date ? formatShortDate(date) : t("trip_generic", {n: i+1});
       const value = tripValue(trip);
+      const seconds = tripSeconds(trip);
+      let detail = `${value} km`;
+      if(seconds !== null){
+        const km = parseDecimal(value);
+        const timeStr = formatDuration(seconds);
+        if(timeStr) detail += ` · ${timeStr}`;
+        if(km > 0){
+          const paceStr = formatMMSS((seconds/60)/km);
+          if(paceStr) detail += ` · ${paceStr}/km`;
+        }
+      }
       row.innerHTML = `
         <span class="trip-label" title="${date ? formatDate(date) : ""}">${label}</span>
-        <span class="trip-value">${value} km</span>
-        <button class="icon-btn" data-del="${i}" title="${t("trip_delete_title")}">✕</button>
+        <span class="trip-value">${detail}</span>
       `;
       list.appendChild(row);
-    });
-    list.querySelectorAll("[data-del]").forEach(btn => {
-      btn.addEventListener("click", e => {
-        const i = parseInt(e.target.dataset.del);
-        const trip = viewedWeek().trips[i];
-        const date = tripDate(trip);
-        const label = date ? formatDate(date) : t("trip_generic", {n: i+1});
-        if(!confirm(t("trip_delete_confirm", {label}))) return;
-        viewedWeek().trips.splice(i,1);
-        saveData();
-        renderAll();
-      });
     });
   }
   updateTripStats();
@@ -1007,25 +1015,27 @@ function renderTrips(){
 function updateTripStats(){
   const week = viewedWeek();
   const total = week.trips.reduce((sum, t) => sum + (parseDecimal(tripValue(t)) || 0), 0);
-  const goal = parseDecimal(week.goal) || 0;
-  const left = goal - total;
-  const pct = goal > 0 ? Math.min(100, (total/goal)*100) : 0;
+  const totalSeconds = week.trips.reduce((sum, t) => sum + (tripSeconds(t) || 0), 0);
+  const goal = computedGoalFor(viewedWeekStart);
+  const left = goal !== null ? goal - total : null;
+  const pct = (goal !== null && goal > 0) ? Math.min(100, (total/goal)*100) : 0;
 
   document.getElementById("totalDone").textContent = total.toFixed(2) + " km";
-  document.getElementById("totalLeft").textContent = (goal > 0 ? left.toFixed(2) : "0") + " km";
+  document.getElementById("totalLeft").textContent = goal !== null ? Math.max(0, left).toFixed(2) + " km" : "–";
+  document.getElementById("totalTime").textContent = totalSeconds > 0 ? formatDuration(totalSeconds) : "–";
   document.getElementById("progressFill").style.width = pct.toFixed(1) + "%";
   document.getElementById("progressPct").textContent = pct.toFixed(0) + "%";
-  document.getElementById("progressText").textContent = `${total.toFixed(2)} / ${goal.toFixed(2)} km`;
+  document.getElementById("progressText").textContent = goal !== null
+    ? `${total.toFixed(2)} / ${goal.toFixed(2)} km`
+    : `${total.toFixed(2)} km`;
 
   const leftEl = document.getElementById("totalLeft");
-  leftEl.style.color = left < 0 ? "var(--accent-2)" : "var(--text)";
-}
+  leftEl.style.color = (left !== null && left < 0) ? "var(--accent-2)" : "var(--text)";
 
-document.getElementById("weekGoal").addEventListener("input", e => {
-  viewedWeek().goal = e.target.value === "" ? null : e.target.value;
-  saveData();
-  updateTripStats();
-});
+  document.getElementById("goalNote").textContent = goal !== null
+    ? t("goal_note", {goal: goal.toFixed(2)})
+    : t("goal_note_none");
+}
 document.getElementById("prevWeekBtn").addEventListener("click", () => {
   viewedWeekStart = addDays(viewedWeekStart, -7);
   renderTrips();
@@ -1078,8 +1088,11 @@ function renderWeeklyChart(){
 
   const W = 600, H = 220, padL = 32, padB = 22, padT = 10, padR = 8;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const gap = 4;
-  const barW = Math.max(3, plotW / range.length - gap);
+  // Skaler mellemrum og søjlebredde ned når der er mange uger, så det hele
+  // altid er inden for viewBox'en i stedet for at flyde ud over kortet.
+  const slot = plotW / range.length;
+  const gap = Math.min(4, slot * 0.3);
+  const barW = Math.max(0.5, slot - gap);
 
   const okColor = cssVar("--accent-2");
   const badColor = cssVar("--danger");
@@ -1433,7 +1446,8 @@ async function syncStravaRuns(){
       entries.sort((a,b) => a.dateLocal.localeCompare(b.dateLocal));
       entries.forEach(({run, dateLocal}) => {
         const km = run.distance / 1000;
-        week.trips.push({value: km.toFixed(2), date: dateLocal});
+        const seconds = typeof run.moving_time === "number" ? run.moving_time : null;
+        week.trips.push({value: km.toFixed(2), date: dateLocal, seconds});
         data.strava.importedIds.push(run.id);
         imported++;
       });
@@ -1559,6 +1573,7 @@ function goToPageEl(pageEl, behavior){
   pageEl.scrollIntoView({behavior, inline: "start", block: "nearest"});
 }
 function goToPage(i){
+  document.querySelectorAll(".modal-overlay").forEach(o => o.style.display = "none");
   const pages = getPages();
   goToPageEl(pages[i], "instant"); // spring direkte til siden, ingen scroll-animation
   updatePageChromeFor(i); // opdatér med det samme frem for udelukkende at vente på scroll-eventet
@@ -1687,11 +1702,34 @@ document.getElementById("logWeeksLimit").addEventListener("change", e => {
     renderCharts();
   });
 });
-document.getElementById("chartRangeResetBtn").addEventListener("click", () => {
-  chartRange = {from: null, to: null};
+function applyChartPreset(preset){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  let from = null, to = null;
+  if(preset === "week"){
+    from = CURRENT_WEEK_START;
+    to = CURRENT_WEEK_START;
+  } else if(preset === "month"){
+    from = toMonday(toDateStr(new Date(y, m, 1)));
+    to = CURRENT_WEEK_START;
+  } else if(preset === "lastMonth"){
+    from = toMonday(toDateStr(new Date(y, m-1, 1)));
+    to = toMonday(toDateStr(new Date(y, m, 0))); // dag 0 = sidste dag i forrige måned
+  } else if(preset === "year"){
+    from = toMonday(toDateStr(new Date(y, 0, 1)));
+    to = CURRENT_WEEK_START;
+  } else if(preset === "lastYear"){
+    from = toMonday(toDateStr(new Date(y-1, 0, 1)));
+    to = toMonday(toDateStr(new Date(y-1, 11, 31)));
+  } // "all" (eller ukendt) -> from/to forbliver null, dvs. hele historikken
+
+  chartRange = {from, to};
   localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
   renderSettingsInputs();
   renderCharts();
+}
+document.querySelectorAll("#chartPresets [data-preset]").forEach(btn => {
+  btn.addEventListener("click", () => applyChartPreset(btn.dataset.preset));
 });
 
 /* ---------- init ---------- */
