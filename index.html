@@ -42,33 +42,31 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
     background:var(--bg);
     color:var(--text);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
   }
   .wrap{max-width:900px;margin:0 auto;}
 
   .topbar{
-    position:sticky;top:0;z-index:10;
+    flex:0 0 auto;
     background:var(--bg);
     border-bottom:1px solid var(--border);
-    padding:10px 16px 8px;
+    padding:10px 16px;
   }
-  .topbar-inner{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .topbar-inner{display:flex;align-items:center;gap:10px;}
   .topbar-icon{width:26px;height:26px;border-radius:7px;display:block;}
   .topbar-title{font-weight:700;font-size:1.05rem;}
-  .page-nav{display:flex;align-items:center;justify-content:center;gap:16px;}
-  .page-arrow{background:none;border:none;color:var(--muted);font-size:1.5rem;line-height:1;cursor:pointer;padding:0 4px;}
-  .page-arrow:hover{color:var(--accent);}
-  .page-dots{display:flex;align-items:center;gap:8px;}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--border);border:none;padding:0;cursor:pointer;}
-  .dot.active{background:var(--accent);width:22px;border-radius:5px;transition:width .2s ease;}
-  .page-label{font-size:.72rem;color:var(--muted);text-align:center;margin-top:4px;text-transform:uppercase;letter-spacing:.04em;}
 
   .pager{
+    flex:1 1 auto;
+    min-height:0;
     display:flex;
     overflow-x:auto;
     scroll-snap-type:x mandatory;
     scroll-behavior:smooth;
     -webkit-overflow-scrolling:touch;
-    height:calc(100vh - 80px);
   }
   .page{
     flex:0 0 100%;
@@ -77,6 +75,21 @@
     overflow-y:auto;
     padding:16px 16px 40px;
   }
+
+  .bottombar{
+    flex:0 0 auto;
+    display:flex;
+    background:var(--card);
+    border-top:1px solid var(--border);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .bottombar-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    background:none;border:none;color:var(--muted);cursor:pointer;
+    padding:8px 4px 10px;font-size:.68rem;font-family:inherit;
+  }
+  .bottombar-btn .bb-icon{font-size:1.35rem;line-height:1;}
+  .bottombar-btn.active{color:var(--accent);}
 
   .card{
     background:var(--card);
@@ -109,12 +122,20 @@
   .empty-state{color:var(--muted);font-size:.85rem;padding:14px 0;text-align:center;}
   .page-order-list{display:flex;flex-direction:column;gap:8px;}
   .page-order-item{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    display:flex;align-items:center;gap:10px;
     background:var(--card-2);border:1px solid var(--border);border-radius:8px;
-    padding:8px 12px;font-size:.85rem;
+    padding:6px 8px;font-size:.85rem;
+    user-select:none;
   }
-  .page-order-item .order-buttons{display:flex;gap:4px;}
-  .page-order-item button:disabled{opacity:.3;cursor:default;}
+  .page-order-item.dragging{
+    opacity:.55;box-shadow:0 6px 16px rgba(0,0,0,.3);position:relative;z-index:5;
+  }
+  .page-order-item .drag-handle{
+    cursor:grab;touch-action:none;color:var(--muted);font-size:1.2rem;line-height:1;
+    padding:8px 10px;flex-shrink:0;
+  }
+  .page-order-item .drag-handle:active{cursor:grabbing;}
+  .page-order-item .page-order-label{flex:1;}
   .pill{
     display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600;
   }
@@ -194,17 +215,6 @@
     <img src="icons/icon-192.png" alt="" class="topbar-icon">
     <span class="topbar-title">Løbeøkonomi</span>
   </div>
-  <div class="page-nav">
-    <button class="page-arrow" id="prevPageBtn" aria-label="Forrige side">‹</button>
-    <div class="page-dots" id="pageDots">
-      <button class="dot active" data-page="0" data-key="log"></button>
-      <button class="dot" data-page="1" data-key="tools"></button>
-      <button class="dot" data-page="2" data-key="settings"></button>
-      <button class="dot" data-page="3" data-key="charts"></button>
-    </div>
-    <button class="page-arrow" id="nextPageBtn" aria-label="Næste side">›</button>
-  </div>
-  <div class="page-label" id="pageLabel"></div>
 </div>
 
 <div class="pager" id="pager">
@@ -443,6 +453,21 @@
   </section>
 
 </div>
+
+<nav class="bottombar" id="bottomBar">
+  <button class="bottombar-btn active" data-page="0" data-key="log">
+    <span class="bb-icon">📅</span><span class="bb-label" data-i18n="page_log"></span>
+  </button>
+  <button class="bottombar-btn" data-page="1" data-key="tools">
+    <span class="bb-icon">⏱️</span><span class="bb-label" data-i18n="page_tools"></span>
+  </button>
+  <button class="bottombar-btn" data-page="2" data-key="settings">
+    <span class="bb-icon">⚙️</span><span class="bb-label" data-i18n="page_settings"></span>
+  </button>
+  <button class="bottombar-btn" data-page="3" data-key="charts">
+    <span class="bb-icon">📈</span><span class="bb-label" data-i18n="page_charts"></span>
+  </button>
+</nav>
 
 <script>
 const KM_PER_MILE = 1.609344;
@@ -1449,24 +1474,24 @@ let pageOrder = (() => {
 })();
 
 function getPages(){ return [...document.querySelectorAll(".page")]; }
-function getDots(){ return [...document.querySelectorAll(".dot")]; }
+function getNavButtons(){ return [...document.querySelectorAll(".bottombar-btn")]; }
 
 // Flytter de fysiske DOM-elementer så de matcher pageOrder, og genberegner
-// data-page-indeks på både sider og prikker.
+// data-page-indeks på både sider og bundbjælke-knapper.
 function applyPageOrder(){
   const pagesByKey = {};
   document.querySelectorAll(".page").forEach(p => pagesByKey[p.dataset.key] = p);
-  const dotsByKey = {};
-  document.querySelectorAll(".dot").forEach(d => dotsByKey[d.dataset.key] = d);
-  const dotsContainer = document.getElementById("pageDots");
+  const btnsByKey = {};
+  document.querySelectorAll(".bottombar-btn").forEach(b => btnsByKey[b.dataset.key] = b);
+  const bottomBar = document.getElementById("bottomBar");
   pageOrder.forEach((key, i) => {
     const pageEl = pagesByKey[key];
-    const dotEl = dotsByKey[key];
-    if(!pageEl || !dotEl) return;
+    const btnEl = btnsByKey[key];
+    if(!pageEl || !btnEl) return;
     pageEl.dataset.page = i;
-    dotEl.dataset.page = i;
+    btnEl.dataset.page = i;
     pager.appendChild(pageEl);
-    dotsContainer.appendChild(dotEl);
+    bottomBar.appendChild(btnEl);
   });
 }
 
@@ -1475,10 +1500,7 @@ function currentPageIndex(){
   return Math.round(pager.scrollLeft / pager.clientWidth);
 }
 function updatePageChromeFor(i){
-  getDots().forEach((d, idx) => d.classList.toggle("active", idx === i));
-  const pages = getPages();
-  const key = pages[i] ? pages[i].dataset.key : pageOrder[0];
-  document.getElementById("pageLabel").textContent = t("page_" + key);
+  getNavButtons().forEach((b, idx) => b.classList.toggle("active", idx === i));
 }
 function goToPage(i){
   pager.scrollTo({left: i * pager.clientWidth, behavior: "smooth"});
@@ -1487,14 +1509,8 @@ function goToPage(i){
 function updatePageChrome(){
   updatePageChromeFor(currentPageIndex());
 }
-document.getElementById("prevPageBtn").addEventListener("click", () => {
-  goToPage(Math.max(0, currentPageIndex() - 1));
-});
-document.getElementById("nextPageBtn").addEventListener("click", () => {
-  goToPage(Math.min(getPages().length - 1, currentPageIndex() + 1));
-});
-document.querySelectorAll(".dot").forEach(d => {
-  d.addEventListener("click", () => goToPage(parseInt(d.dataset.page)));
+document.querySelectorAll(".bottombar-btn").forEach(b => {
+  b.addEventListener("click", () => goToPage(parseInt(b.dataset.page)));
 });
 let pagerScrollTimeout;
 pager.addEventListener("scroll", () => {
@@ -1506,31 +1522,57 @@ function renderPageOrderList(){
   const container = document.getElementById("pageOrderList");
   if(!container) return;
   container.innerHTML = "";
-  pageOrder.forEach((key, i) => {
+  pageOrder.forEach((key) => {
     const row = document.createElement("div");
     row.className = "page-order-item";
+    row.dataset.key = key;
     row.innerHTML = `
-      <span>${i+1}. ${t("page_" + key)}</span>
-      <div class="order-buttons">
-        <button class="icon-btn" data-move="up" data-key="${key}" ${i===0 ? "disabled" : ""} title="↑">↑</button>
-        <button class="icon-btn" data-move="down" data-key="${key}" ${i===pageOrder.length-1 ? "disabled" : ""} title="↓">↓</button>
-      </div>
+      <span class="drag-handle">⠿</span>
+      <span class="page-order-label">${t("page_" + key)}</span>
     `;
     container.appendChild(row);
   });
-  container.querySelectorAll("[data-move]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const key = btn.dataset.key;
-      const idx = pageOrder.indexOf(key);
-      const swapIdx = btn.dataset.move === "up" ? idx - 1 : idx + 1;
-      if(swapIdx < 0 || swapIdx >= pageOrder.length) return;
-      [pageOrder[idx], pageOrder[swapIdx]] = [pageOrder[swapIdx], pageOrder[idx]];
-      localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(pageOrder));
-      applyPageOrder();
-      renderPageOrderList();
-      // Bliv på Indstillinger-siden, uanset hvor den nu ligger i rækkefølgen
-      pager.scrollTo({left: pageOrder.indexOf("settings") * pager.clientWidth, behavior: "instant"});
-      updatePageChrome();
+  attachPageOrderDrag(container);
+}
+
+// Finder den række hvis midtpunkt ligger lige under y - bruges til at afgøre
+// hvor den række der trækkes skal indsættes.
+function getDragRowAfter(container, y, excludeEl){
+  const rows = [...container.querySelectorAll(".page-order-item")].filter(el => el !== excludeEl);
+  return rows.reduce((closest, row) => {
+    const box = row.getBoundingClientRect();
+    const offset = y - box.top - box.height/2;
+    if(offset < 0 && offset > closest.offset) return {offset, element: row};
+    return closest;
+  }, {offset: Number.NEGATIVE_INFINITY, element: null}).element;
+}
+
+function attachPageOrderDrag(container){
+  container.querySelectorAll(".drag-handle").forEach(handle => {
+    handle.addEventListener("pointerdown", e => {
+      const row = handle.closest(".page-order-item");
+      row.classList.add("dragging");
+      handle.setPointerCapture(e.pointerId);
+
+      const onMove = ev => {
+        const afterEl = getDragRowAfter(container, ev.clientY, row);
+        if(afterEl == null) container.appendChild(row);
+        else container.insertBefore(row, afterEl);
+      };
+      const onUp = () => {
+        row.classList.remove("dragging");
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+        pageOrder = [...container.querySelectorAll(".page-order-item")].map(r => r.dataset.key);
+        localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(pageOrder));
+        applyPageOrder();
+        renderPageOrderList();
+        // Bliv på Indstillinger-siden, uanset hvor den nu ligger i rækkefølgen
+        pager.scrollTo({left: pageOrder.indexOf("settings") * pager.clientWidth, behavior: "instant"});
+        updatePageChrome();
+      };
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
     });
   });
 }
