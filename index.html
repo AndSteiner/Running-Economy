@@ -1842,6 +1842,14 @@ document.addEventListener("visibilitychange", () => {
   if(document.visibilityState === "visible") autoSyncStravaIfDue();
 });
 
+// Ryd cache-bust-parameteren fra en "Ryd cache og genindlæs"-navigation,
+// så adresselinjen ikke bliver stående med et ?v=... bagefter.
+if(new URLSearchParams(location.search).has("v")){
+  const cleanUrl = new URL(location.href);
+  cleanUrl.searchParams.delete("v");
+  history.replaceState({}, "", cleanUrl.toString());
+}
+
 const cameFromStravaRedirect = new URLSearchParams(location.search).has("code") || new URLSearchParams(location.search).has("error");
 handleStravaRedirect();
 if(!cameFromStravaRedirect) autoSyncStravaIfDue();
@@ -1898,15 +1906,13 @@ async function clearAppCacheAndReload(){
     console.warn("Kunne ikke rydde cache fuldstændigt:", e);
   }
   sessionStorage.setItem("lobeokonomi-skip-sw-reload", "1");
-  try{
-    // location.reload() kan stadig blive besvaret af browserens almindelige
-    // HTTP-cache (adskilt fra Service Worker-cachen vi lige ryddede), og så
-    // lander man tilbage på en gammel side uden fx bundbjælken. Et forudgående
-    // fetch med cache:"reload" tvinger en frisk hentning og opdaterer den
-    // cache, så den efterfølgende reload rent faktisk henter det nye.
-    await fetch(location.href, {cache: "reload"});
-  }catch(e){}
-  location.reload();
+  // Naviger til en cache-bustet URL i stedet for location.reload(). En URL
+  // med en ukendt forespørgselsstreng har browseren aldrig set før, så der
+  // er ingen tvivl om cache overhovedet - hverken Service Worker-cachen
+  // (allerede ryddet ovenfor) eller browserens egen, separate HTTP-cache.
+  const freshUrl = new URL(location.href);
+  freshUrl.searchParams.set("v", Date.now().toString());
+  location.replace(freshUrl.toString());
 }
 document.getElementById("clearCacheBtn").addEventListener("click", () => {
   if(confirm(t("clear_cache_confirm"))) clearAppCacheAndReload();
