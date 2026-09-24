@@ -218,6 +218,10 @@
   .chart-bar:hover, .chart-dot:hover{opacity:.8;}
   .chart-legend{display:flex;gap:16px;margin-top:10px;font-size:.75rem;color:var(--muted);flex-wrap:wrap;}
   .chart-legend .legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
+  .chart-legend .legend-gradient{
+    display:inline-block;width:110px;height:8px;border-radius:4px;
+    background:linear-gradient(90deg, rgb(94,166,117), rgb(21,128,61), rgb(217,119,6), rgb(220,38,38));
+  }
   .chart-tooltip{
     position:absolute;display:none;pointer-events:none;z-index:50;
     background:var(--card);border:1px solid var(--border);color:var(--text);
@@ -425,8 +429,9 @@
         <p class="sub" data-i18n="chart_weekly_sub"></p>
         <div id="weeklyChart"></div>
         <div class="chart-legend">
-          <span><i class="legend-dot" style="background:var(--accent-2)"></i><span data-i18n="chart_legend_ok"></span></span>
-          <span><i class="legend-dot" style="background:var(--danger)"></i><span data-i18n="chart_legend_bad"></span></span>
+          <span data-i18n="chart_legend_low"></span>
+          <span class="legend-gradient"></span>
+          <span data-i18n="chart_legend_high"></span>
         </div>
       </div>
 
@@ -575,6 +580,7 @@ const STRINGS = {
     strava_fetching: "Henter løbeture fra Strava...",
     strava_imported: "{n} ny{suffix} løbetur{plural} importeret fra Strava.",
     strava_none_new: "Ingen nye løbeture at hente fra Strava.",
+    strava_backfilled: "{n} eksisterende tur(e) fik tilføjet tid/pace.",
     strava_disconnect_confirm: "Afbryd forbindelsen til Strava? Allerede importerede ture bliver ikke slettet.",
     strava_error: "Fejl: {msg}",
     data_heading: "Data",
@@ -590,7 +596,7 @@ const STRINGS = {
     theme_light: "Lyst", theme_dark: "Mørkt",
     chart_weekly_heading: "Km pr. uge", chart_weekly_sub: "Søjlehøjde = km løbet den uge. Farve viser om stigningen holder sig inden for 10%-reglen.",
     chart_cumulative_heading: "Samlet distance over tid", chart_cumulative_sub: "Akkumuleret antal km på tværs af alle uger.",
-    chart_legend_ok: "Inden for 10%", chart_legend_bad: "Over 10%",
+    chart_legend_low: "0%", chart_legend_high: "30%+",
     charts_empty: "Ingen data endnu — forbind Strava under Indstillinger.",
     chart_week_tooltip: "Uge {week}: {val} km",
     chart_date_tooltip: "{date}: {val} km i alt",
@@ -655,6 +661,7 @@ const STRINGS = {
     strava_fetching: "Fetching runs from Strava...",
     strava_imported: "{n} new run{plural} imported from Strava.",
     strava_none_new: "No new runs to fetch from Strava.",
+    strava_backfilled: "{n} existing run(s) got time/pace added.",
     strava_disconnect_confirm: "Disconnect from Strava? Already imported runs won't be deleted.",
     strava_error: "Error: {msg}",
     data_heading: "Data",
@@ -670,7 +677,7 @@ const STRINGS = {
     theme_light: "Light", theme_dark: "Dark",
     chart_weekly_heading: "Km per week", chart_weekly_sub: "Bar height = km run that week. Color shows whether the increase stayed within the 10% rule.",
     chart_cumulative_heading: "Total distance over time", chart_cumulative_sub: "Cumulative km across all weeks.",
-    chart_legend_ok: "Within 10%", chart_legend_bad: "Over 10%",
+    chart_legend_low: "0%", chart_legend_high: "30%+",
     charts_empty: "No data yet — connect Strava under Settings.",
     chart_week_tooltip: "Week {week}: {val} km",
     chart_date_tooltip: "{date}: {val} km total",
@@ -752,6 +759,10 @@ function formatShortDate(dateStr){
   const [, m, d] = dateStr.split("-");
   return `${d}/${m}`;
 }
+function formatShortYearDate(dateStr){
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y.slice(2)}`;
+}
 // ISO 8601-ugenummer (samme som ugenr.dk) for en given dato.
 function isoWeekNumber(dateStr){
   const d = new Date(dateStr + "T00:00:00");
@@ -762,6 +773,31 @@ function isoWeekNumber(dateStr){
   const firstDayNr = (firstThursday.getDay() + 6) % 7;
   firstThursday.setDate(firstThursday.getDate() - firstDayNr + 3);
   return 1 + Math.round((thursday - firstThursday) / (7*24*3600*1000));
+}
+// Farveskala for ugentlig stigning: under 0% er neutral, 0-10% er grøn
+// (blødere ved 0%, fuld grøn ved 10%), og herefter glider den gradvist
+// over mod orange og til sidst rød ved 30%+.
+const PCT_COLOR_STOPS = [
+  {p: 0,  c: [94, 166, 117]},  // blød grøn
+  {p: 10, c: [21, 128, 61]},   // fuld grøn (--accent-2)
+  {p: 20, c: [217, 119, 6]},   // orange
+  {p: 30, c: [220, 38, 38]},   // rød (--danger)
+];
+function pctColor(pct){
+  if(pct === null || isNaN(pct) || pct < 0) return cssVar("--muted");
+  if(pct >= 30) return "rgb(220,38,38)";
+  let lo = PCT_COLOR_STOPS[0], hi = PCT_COLOR_STOPS[PCT_COLOR_STOPS.length-1];
+  for(let i=0;i<PCT_COLOR_STOPS.length-1;i++){
+    if(pct >= PCT_COLOR_STOPS[i].p && pct <= PCT_COLOR_STOPS[i+1].p){
+      lo = PCT_COLOR_STOPS[i]; hi = PCT_COLOR_STOPS[i+1];
+      break;
+    }
+  }
+  const t = (pct - lo.p) / (hi.p - lo.p);
+  const r = Math.round(lo.c[0] + (hi.c[0]-lo.c[0])*t);
+  const g = Math.round(lo.c[1] + (hi.c[1]-lo.c[1])*t);
+  const b = Math.round(lo.c[2] + (hi.c[2]-lo.c[2])*t);
+  return `rgb(${r},${g},${b})`;
 }
 function parseDecimal(str){
   if(str === null || str === undefined) return null;
@@ -921,15 +957,15 @@ function renderLog(){
     if(prevActual !== null && prevActual > 0){
       allowedHtml = `<span class="pill neutral">${(prevActual*1.1).toFixed(1)}</span>`;
       const pct = (actual/prevActual - 1) * 100;
-      const cls = pct <= 10.0001 ? "ok" : "bad";
-      pctHtml = `<span class="pill ${cls}">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span>`;
+      const color = pctColor(pct);
+      pctHtml = `<span class="pill" style="background:color-mix(in srgb, ${color} 18%, transparent);color:${color};">${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%</span>`;
     }
 
     const tr = document.createElement("tr");
     if(isToday) tr.classList.add("today-row");
     tr.innerHTML = `
       <td>${isoWeekNumber(weekStart)}${isToday ? ` <span class="pill ok">${t("today_badge")}</span>` : ""}</td>
-      <td>${formatShortDate(weekStart)}–${formatShortDate(end)}</td>
+      <td>${formatShortYearDate(weekStart)}–${formatShortYearDate(end)}</td>
       <td>${actual.toFixed(1)}</td>
       <td>${pctHtml}</td>
       <td>${allowedHtml}</td>
@@ -1094,8 +1130,6 @@ function renderWeeklyChart(){
   const gap = Math.min(4, slot * 0.3);
   const barW = Math.max(0.5, slot - gap);
 
-  const okColor = cssVar("--accent-2");
-  const badColor = cssVar("--danger");
   const neutralColor = cssVar("--muted");
   const gridColor = cssVar("--border");
   const textColor = cssVar("--muted");
@@ -1115,8 +1149,7 @@ function renderWeeklyChart(){
     const prevVal = i > 0 ? values[i-1] : null;
     let color = neutralColor;
     if(prevVal !== null && prevVal > 0){
-      const pct = (val/prevVal - 1) * 100;
-      color = pct <= 10.0001 ? okColor : badColor;
+      color = pctColor((val/prevVal - 1) * 100);
     }
     const barH = max > 0 ? (val/max) * plotH : 0;
     const x = padL + i * (barW + gap);
@@ -1432,22 +1465,49 @@ async function syncStravaRuns(){
 
     const runs = allActivities.filter(a => a.type === "Run" || a.sport_type === "Run" || a.sport_type === "TrailRun");
 
+    // Find en allerede importeret tur igen: først via gemt Strava-id (ture
+    // importeret efter dette blev tilføjet), ellers via dato+distance (ældre
+    // ture, som endnu ikke har et id gemt).
+    function findExistingTrip(run, dateLocal){
+      for(const key in data.tripsByWeek){
+        for(const trip of data.tripsByWeek[key].trips){
+          if(trip && typeof trip === "object" && trip.id === run.id) return trip;
+        }
+      }
+      const week = data.tripsByWeek[toMonday(dateLocal)];
+      if(!week) return null;
+      const km = (run.distance/1000).toFixed(2);
+      return week.trips.find(tr => tr && typeof tr === "object" && tr.date === dateLocal && tripValue(tr) === km) || null;
+    }
+
     const newRunsByWeek = {};
+    let backfilled = 0;
     runs.forEach(run => {
-      if(data.strava.importedIds.includes(run.id)) return;
       const dateLocal = (run.start_date_local || run.start_date).slice(0,10);
+      const seconds = typeof run.moving_time === "number" ? run.moving_time : null;
+
+      if(data.strava.importedIds.includes(run.id)){
+        const existing = findExistingTrip(run, dateLocal);
+        if(existing){
+          let changed = false;
+          if(existing.id == null){ existing.id = run.id; changed = true; }
+          if(existing.seconds == null && seconds != null){ existing.seconds = seconds; changed = true; }
+          if(changed) backfilled++;
+        }
+        return;
+      }
+
       const weekStart = toMonday(dateLocal);
-      (newRunsByWeek[weekStart] = newRunsByWeek[weekStart] || []).push({run, dateLocal});
+      (newRunsByWeek[weekStart] = newRunsByWeek[weekStart] || []).push({run, dateLocal, seconds});
     });
 
     let imported = 0;
     Object.entries(newRunsByWeek).forEach(([weekStart, entries]) => {
       const week = ensureWeek(weekStart);
       entries.sort((a,b) => a.dateLocal.localeCompare(b.dateLocal));
-      entries.forEach(({run, dateLocal}) => {
+      entries.forEach(({run, dateLocal, seconds}) => {
         const km = run.distance / 1000;
-        const seconds = typeof run.moving_time === "number" ? run.moving_time : null;
-        week.trips.push({value: km.toFixed(2), date: dateLocal, seconds});
+        week.trips.push({value: km.toFixed(2), date: dateLocal, seconds, id: run.id});
         data.strava.importedIds.push(run.id);
         imported++;
       });
@@ -1456,13 +1516,18 @@ async function syncStravaRuns(){
     saveData();
     renderAll();
     renderStravaStatus();
-    stravaStatusMsg(imported > 0
-      ? t("strava_imported", {
-          n: imported,
-          suffix: imported === 1 ? "" : "e",
-          plural: imported === 1 ? "" : (lang === "da" ? "e" : "s")
-        })
-      : t("strava_none_new"));
+    const msgParts = [];
+    if(imported > 0){
+      msgParts.push(t("strava_imported", {
+        n: imported,
+        suffix: imported === 1 ? "" : "e",
+        plural: imported === 1 ? "" : (lang === "da" ? "e" : "s")
+      }));
+    }
+    if(backfilled > 0){
+      msgParts.push(t("strava_backfilled", {n: backfilled}));
+    }
+    stravaStatusMsg(msgParts.length ? msgParts.join(" ") : t("strava_none_new"));
   }catch(err){
     stravaStatusMsg(t("strava_error", {msg: err.message}));
   }
@@ -1746,7 +1811,25 @@ applyPageOrder();
 applyStaticTranslations();
 renderAll();
 renderStravaStatus();
+
+// Synkroniser automatisk med Strava, når appen åbnes (højst hvert 15. minut,
+// for ikke at overbelaste Strava-API'et) - i stedet for kun ved manuelt tryk.
+async function autoSyncStravaIfDue(){
+  if(!data.strava.refreshToken) return;
+  const now = Date.now();
+  const last = data.strava.lastSyncAt || 0;
+  if(now - last < 15*60*1000) return;
+  data.strava.lastSyncAt = now;
+  saveData();
+  await syncStravaRuns();
+}
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible") autoSyncStravaIfDue();
+});
+
+const cameFromStravaRedirect = new URLSearchParams(location.search).has("code") || new URLSearchParams(location.search).has("error");
 handleStravaRedirect();
+if(!cameFromStravaRedirect) autoSyncStravaIfDue();
 
 if("serviceWorker" in navigator){
   // Når en ny service worker overtager (fordi den nye version har kaldt
@@ -1790,6 +1873,14 @@ async function clearAppCacheAndReload(){
   }catch(e){
     console.warn("Kunne ikke rydde cache fuldstændigt:", e);
   }
+  try{
+    // location.reload() kan stadig blive besvaret af browserens almindelige
+    // HTTP-cache (adskilt fra Service Worker-cachen vi lige ryddede), og så
+    // lander man tilbage på en gammel side uden fx bundbjælken. Et forudgående
+    // fetch med cache:"reload" tvinger en frisk hentning og opdaterer den
+    // cache, så den efterfølgende reload rent faktisk henter det nye.
+    await fetch(location.href, {cache: "reload"});
+  }catch(e){}
   location.reload();
 }
 document.getElementById("clearCacheBtn").addEventListener("click", () => {
