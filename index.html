@@ -1404,10 +1404,10 @@ async function syncStravaRuns(){
     const token = await ensureStravaToken();
     if(!token) throw new Error("not connected to Strava yet");
 
-    const after = Math.floor(Date.now()/1000) - 90*24*3600; // seneste ~90 dage
+    // Ingen "after"-grænse: hent hele historikken, ikke kun de seneste 90 dage.
     let page = 1, allActivities = [];
     while(true){
-      const res = await fetch(`${STRAVA_WORKER_URL}/activities?after=${after}&page=${page}&per_page=100`, {
+      const res = await fetch(`${STRAVA_WORKER_URL}/activities?page=${page}&per_page=100`, {
         headers: {"Authorization": `Bearer ${token}`}
       });
       if(!res.ok) throw new Error(`could not fetch activities (${res.status})`);
@@ -1673,15 +1673,19 @@ document.getElementById("logWeeksLimit").addEventListener("change", e => {
   localStorage.setItem(LOG_WEEKS_LIMIT_KEY, logWeeksLimit);
   renderLog();
 });
-document.getElementById("chartFromDate").addEventListener("change", e => {
-  chartRange.from = e.target.value ? toMonday(e.target.value) : null;
-  localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
-  renderCharts();
-});
-document.getElementById("chartToDate").addEventListener("change", e => {
-  chartRange.to = e.target.value ? toMonday(e.target.value) : null;
-  localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
-  renderCharts();
+["input","change"].forEach(evt => {
+  document.getElementById("chartFromDate").addEventListener(evt, e => {
+    if(!e.target.value) return;
+    chartRange.from = toMonday(e.target.value);
+    localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
+    renderCharts();
+  });
+  document.getElementById("chartToDate").addEventListener(evt, e => {
+    if(!e.target.value) return;
+    chartRange.to = toMonday(e.target.value);
+    localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
+    renderCharts();
+  });
 });
 document.getElementById("chartRangeResetBtn").addEventListener("click", () => {
   chartRange = {from: null, to: null};
