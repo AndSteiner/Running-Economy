@@ -91,6 +91,27 @@
   .bottombar-btn .bb-icon{font-size:1.35rem;line-height:1;}
   .bottombar-btn.active{color:var(--accent);}
 
+  .card-settings-btn{
+    margin-left:auto;background:none;border:none;color:var(--muted);
+    font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1;
+  }
+  .card-settings-btn:hover{color:var(--accent);}
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);
+    display:flex;align-items:center;justify-content:center;
+    z-index:100;padding:20px;
+  }
+  .modal-box{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:20px;max-width:420px;width:100%;position:relative;
+    max-height:80vh;overflow-y:auto;
+  }
+  .modal-close{
+    position:absolute;top:10px;right:10px;background:none;border:none;
+    color:var(--muted);font-size:1.1rem;cursor:pointer;padding:6px 10px;border-radius:6px;
+  }
+  .modal-close:hover{color:var(--danger);}
+
   .card{
     background:var(--card);
     border:1px solid var(--border);
@@ -223,7 +244,7 @@
   <section class="page" data-page="0" data-key="log">
     <div class="wrap">
       <div class="card">
-        <h2>📅 <span data-i18n="log_heading"></span></h2>
+        <h2>📅 <span data-i18n="log_heading"></span><button class="card-settings-btn" id="openLogSettingsBtn" title="⚙️">⚙️</button></h2>
         <p class="sub" data-i18n="log_sub"></p>
         <div style="overflow-x:auto;">
           <table id="logTable">
@@ -401,40 +422,6 @@
         <div id="pageOrderList" class="page-order-list"></div>
       </div>
 
-      <div class="card">
-        <h2>📅 <span data-i18n="log_settings_heading"></span></h2>
-        <p class="sub" data-i18n="log_settings_sub"></p>
-        <div class="field">
-          <label for="logWeeksLimit" data-i18n="log_weeks_limit_label"></label>
-          <select id="logWeeksLimit">
-            <option value="4">4</option>
-            <option value="8">8</option>
-            <option value="12">12</option>
-            <option value="26">26</option>
-            <option value="52">52</option>
-            <option value="all" data-i18n="log_weeks_limit_all"></option>
-          </select>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>📈 <span data-i18n="chart_settings_heading"></span></h2>
-        <p class="sub" data-i18n="chart_settings_sub"></p>
-        <div class="grid-2">
-          <div class="field">
-            <label for="chartFromDate" data-i18n="chart_from_label"></label>
-            <input type="date" id="chartFromDate">
-          </div>
-          <div class="field">
-            <label for="chartToDate" data-i18n="chart_to_label"></label>
-            <input type="date" id="chartToDate">
-          </div>
-        </div>
-        <div class="actions-row">
-          <button class="btn secondary small" id="chartRangeResetBtn" data-i18n="chart_range_reset"></button>
-        </div>
-      </div>
-
       <footer data-i18n="footer_text"></footer>
     </div>
   </section>
@@ -443,7 +430,7 @@
   <section class="page" data-page="3" data-key="charts">
     <div class="wrap">
       <div class="card">
-        <h2>📈 <span data-i18n="chart_weekly_heading"></span></h2>
+        <h2>📈 <span data-i18n="chart_weekly_heading"></span><button class="card-settings-btn" id="openChartSettingsBtn" title="⚙️">⚙️</button></h2>
         <p class="sub" data-i18n="chart_weekly_sub"></p>
         <div id="weeklyChart"></div>
         <div class="chart-legend">
@@ -476,6 +463,46 @@
     <span class="bb-icon">📈</span><span class="bb-label" data-i18n="page_charts"></span>
   </button>
 </nav>
+
+<div class="modal-overlay" id="logSettingsModal" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-close" data-close-modal>✕</button>
+    <h2>📅 <span data-i18n="log_settings_heading"></span></h2>
+    <p class="sub" data-i18n="log_settings_sub"></p>
+    <div class="field">
+      <label for="logWeeksLimit" data-i18n="log_weeks_limit_label"></label>
+      <select id="logWeeksLimit">
+        <option value="4">4</option>
+        <option value="8">8</option>
+        <option value="12">12</option>
+        <option value="26">26</option>
+        <option value="52">52</option>
+        <option value="all" data-i18n="log_weeks_limit_all"></option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="chartSettingsModal" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-close" data-close-modal>✕</button>
+    <h2>📈 <span data-i18n="chart_settings_heading"></span></h2>
+    <p class="sub" data-i18n="chart_settings_sub"></p>
+    <div class="grid-2">
+      <div class="field">
+        <label for="chartFromDate" data-i18n="chart_from_label"></label>
+        <input type="date" id="chartFromDate">
+      </div>
+      <div class="field">
+        <label for="chartToDate" data-i18n="chart_to_label"></label>
+        <input type="date" id="chartToDate">
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn secondary small" id="chartRangeResetBtn" data-i18n="chart_range_reset"></button>
+    </div>
+  </div>
+</div>
 
 <script>
 const KM_PER_MILE = 1.609344;
@@ -1507,15 +1534,32 @@ function applyPageOrder(){
   });
 }
 
+// Finder hvilken side der aktuelt er "snappet" til visning, ved at se hvilken
+// sides venstrekant ligger tættest på pagerens egen venstrekant. Mere robust
+// end at regne ud fra scrollLeft/clientWidth, som kan være 0/upålidelig lige
+// efter layout-ændringer (fx på mobil, eller når man netop har trukket i
+// side-rækkefølgen).
 function currentPageIndex(){
-  if(!pager.clientWidth) return 0;
-  return Math.round(pager.scrollLeft / pager.clientWidth);
+  const pages = getPages();
+  if(pages.length === 0) return 0;
+  const pagerLeft = pager.getBoundingClientRect().left;
+  let best = 0, bestDist = Infinity;
+  pages.forEach((p, i) => {
+    const dist = Math.abs(p.getBoundingClientRect().left - pagerLeft);
+    if(dist < bestDist){ bestDist = dist; best = i; }
+  });
+  return best;
 }
 function updatePageChromeFor(i){
   getNavButtons().forEach((b, idx) => b.classList.toggle("active", idx === i));
 }
+function goToPageEl(pageEl, behavior){
+  if(!pageEl) return;
+  pageEl.scrollIntoView({behavior, inline: "start", block: "nearest"});
+}
 function goToPage(i){
-  pager.scrollTo({left: i * pager.clientWidth, behavior: "smooth"});
+  const pages = getPages();
+  goToPageEl(pages[i], "smooth");
   updatePageChromeFor(i); // opdatér med det samme frem for udelukkende at vente på scroll-eventet
 }
 function updatePageChrome(){
@@ -1580,7 +1624,7 @@ function attachPageOrderDrag(container){
         applyPageOrder();
         renderPageOrderList();
         // Bliv på Indstillinger-siden, uanset hvor den nu ligger i rækkefølgen
-        pager.scrollTo({left: pageOrder.indexOf("settings") * pager.clientWidth, behavior: "instant"});
+        goToPageEl(document.querySelector('.page[data-key="settings"]'), "instant");
         updatePageChrome();
       };
       document.addEventListener("pointermove", onMove);
@@ -1594,6 +1638,22 @@ document.getElementById("langDaBtn").addEventListener("click", () => setLang("da
 document.getElementById("langEnBtn").addEventListener("click", () => setLang("en"));
 document.getElementById("themeLightBtn").addEventListener("click", () => setTheme("light"));
 document.getElementById("themeDarkBtn").addEventListener("click", () => setTheme("dark"));
+
+/* ---------- Popup-indstillinger ---------- */
+function openModal(id){
+  document.getElementById(id).style.display = "flex";
+}
+function closeModal(overlay){
+  overlay.style.display = "none";
+}
+document.getElementById("openLogSettingsBtn").addEventListener("click", () => openModal("logSettingsModal"));
+document.getElementById("openChartSettingsBtn").addEventListener("click", () => openModal("chartSettingsModal"));
+document.querySelectorAll("[data-close-modal]").forEach(btn => {
+  btn.addEventListener("click", () => closeModal(btn.closest(".modal-overlay")));
+});
+document.querySelectorAll(".modal-overlay").forEach(overlay => {
+  overlay.addEventListener("click", e => { if(e.target === overlay) closeModal(overlay); });
+});
 
 /* ---------- Log-/graf-indstillinger ---------- */
 function renderSettingsInputs(){
