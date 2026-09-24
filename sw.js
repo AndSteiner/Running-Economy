@@ -1,4 +1,4 @@
-const CACHE_NAME = "lobeokonomi-cache-v2";
+const CACHE_NAME = "lobeokonomi-cache-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -24,21 +24,27 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first for app shell, fall back to network, and refresh the cache in the background.
+// Network-first: altid hent den nyeste version når der er forbindelse, og
+// opdatér cachen undervejs. Falder kun tilbage til cachen, hvis der ikke er
+// netværk (offline). Det er vigtigere at få opdateringer med det samme, end
+// at spare nogle få hundrede ms på et cache-hit.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || networkFetch;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
+});
+
+// Lad siden bede denne (nye, ventende) service worker om at overtage med det
+// samme, i stedet for at vente på at alle gamle faner lukkes.
+self.addEventListener("message", (event) => {
+  if (event.data === "skipWaiting") self.skipWaiting();
 });

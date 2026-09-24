@@ -370,6 +370,14 @@
       </div>
 
       <div class="card">
+        <h2>🔄 <span data-i18n="update_heading"></span></h2>
+        <p class="sub" data-i18n="update_sub"></p>
+        <div class="actions-row">
+          <button class="btn secondary small" id="clearCacheBtn" data-i18n="btn_clear_cache"></button>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>🌐 <span data-i18n="lang_heading"></span></h2>
         <p class="sub" data-i18n="lang_sub"></p>
         <div class="toggle-group">
@@ -549,6 +557,8 @@ const STRINGS = {
     data_imported_at: "Data importeret kl. {time}",
     data_import_error: "Kunne ikke importere: {msg}",
     data_import_overwrite_confirm: "Dette overskriver dine nuværende data i denne browser. Fortsæt?",
+    update_heading: "App-opdatering", update_sub: "Ser appen forældet ud, eller virker en ny funktion ikke? Ryd den lokale cache og hent den nyeste version.",
+    btn_clear_cache: "Ryd cache og genindlæs", clear_cache_confirm: "Appen genindlæses og henter den nyeste version. Dine løbedata bliver ikke slettet (kun visnings-cachen). Fortsæt?",
     lang_heading: "Sprog", lang_sub: "Vælg det sprog appen skal vises i.",
     theme_heading: "Udseende", theme_sub: "Vælg mellem lyst og mørkt tema.",
     theme_light: "Lyst", theme_dark: "Mørkt",
@@ -622,6 +632,8 @@ const STRINGS = {
     data_imported_at: "Data imported at {time}",
     data_import_error: "Could not import: {msg}",
     data_import_overwrite_confirm: "This will overwrite your current data in this browser. Continue?",
+    update_heading: "App update", update_sub: "App looking outdated, or a new feature not working? Clear the local cache and fetch the latest version.",
+    btn_clear_cache: "Clear cache & reload", clear_cache_confirm: "The app will reload and fetch the latest version. Your running data will not be deleted (only the display cache). Continue?",
     lang_heading: "Language", lang_sub: "Choose the language the app is displayed in.",
     theme_heading: "Appearance", theme_sub: "Choose between light and dark theme.",
     theme_light: "Light", theme_dark: "Dark",
@@ -1634,10 +1646,52 @@ renderStravaStatus();
 handleStravaRedirect();
 
 if("serviceWorker" in navigator){
+  // Når en ny service worker overtager (fordi den nye version har kaldt
+  // skipWaiting), genindlæser vi siden automatisk én gang, så opdateringer
+  // rammer med det samme i stedet for at kræve manuel cache-rydning.
+  let swRefreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if(swRefreshing) return;
+    swRefreshing = true;
+    location.reload();
+  });
+
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service worker registration failed:", err));
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      // Bed en evt. ventende (ny) service worker om at overtage med det samme
+      if(reg.waiting) reg.waiting.postMessage("skipWaiting");
+      reg.addEventListener("updatefound", () => {
+        const newWorker = reg.installing;
+        if(!newWorker) return;
+        newWorker.addEventListener("statechange", () => {
+          if(newWorker.state === "installed" && navigator.serviceWorker.controller){
+            newWorker.postMessage("skipWaiting");
+          }
+        });
+      });
+      reg.update();
+    }).catch(err => console.warn("Service worker registration failed:", err));
   });
 }
+
+async function clearAppCacheAndReload(){
+  try{
+    if("caches" in window){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if("serviceWorker" in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  }catch(e){
+    console.warn("Kunne ikke rydde cache fuldstændigt:", e);
+  }
+  location.reload();
+}
+document.getElementById("clearCacheBtn").addEventListener("click", () => {
+  if(confirm(t("clear_cache_confirm"))) clearAppCacheAndReload();
+});
 </script>
 </body>
 </html>
