@@ -220,7 +220,7 @@
   .chart-legend .legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;}
   .chart-legend .legend-gradient{
     display:inline-block;width:110px;height:8px;border-radius:4px;
-    background:linear-gradient(90deg, rgb(94,166,117), rgb(21,128,61), rgb(217,119,6), rgb(220,38,38));
+    background:linear-gradient(90deg, rgb(94,166,117) 0%, rgb(21,128,61) 10%, rgb(217,119,6) 55%, rgb(220,38,38) 100%);
   }
   .chart-tooltip{
     position:absolute;display:none;pointer-events:none;z-index:50;
@@ -596,7 +596,7 @@ const STRINGS = {
     theme_light: "Lyst", theme_dark: "Mørkt",
     chart_weekly_heading: "Km pr. uge", chart_weekly_sub: "Søjlehøjde = km løbet den uge. Farve viser om stigningen holder sig inden for 10%-reglen.",
     chart_cumulative_heading: "Samlet distance over tid", chart_cumulative_sub: "Akkumuleret antal km på tværs af alle uger.",
-    chart_legend_low: "0%", chart_legend_high: "30%+",
+    chart_legend_low: "0%", chart_legend_high: "100%+",
     charts_empty: "Ingen data endnu — forbind Strava under Indstillinger.",
     chart_week_tooltip: "Uge {week}: {val} km",
     chart_date_tooltip: "{date}: {val} km i alt",
@@ -677,7 +677,7 @@ const STRINGS = {
     theme_light: "Light", theme_dark: "Dark",
     chart_weekly_heading: "Km per week", chart_weekly_sub: "Bar height = km run that week. Color shows whether the increase stayed within the 10% rule.",
     chart_cumulative_heading: "Total distance over time", chart_cumulative_sub: "Cumulative km across all weeks.",
-    chart_legend_low: "0%", chart_legend_high: "30%+",
+    chart_legend_low: "0%", chart_legend_high: "100%+",
     charts_empty: "No data yet — connect Strava under Settings.",
     chart_week_tooltip: "Week {week}: {val} km",
     chart_date_tooltip: "{date}: {val} km total",
@@ -778,14 +778,14 @@ function isoWeekNumber(dateStr){
 // (blødere ved 0%, fuld grøn ved 10%), og herefter glider den gradvist
 // over mod orange og til sidst rød ved 30%+.
 const PCT_COLOR_STOPS = [
-  {p: 0,  c: [94, 166, 117]},  // blød grøn
-  {p: 10, c: [21, 128, 61]},   // fuld grøn (--accent-2)
-  {p: 20, c: [217, 119, 6]},   // orange
-  {p: 30, c: [220, 38, 38]},   // rød (--danger)
+  {p: 0,   c: [94, 166, 117]},  // blød grøn
+  {p: 10,  c: [21, 128, 61]},   // fuld grøn (--accent-2)
+  {p: 55,  c: [217, 119, 6]},   // orange (midtpunkt)
+  {p: 100, c: [220, 38, 38]},   // rød (--danger)
 ];
 function pctColor(pct){
   if(pct === null || isNaN(pct) || pct < 0) return cssVar("--muted");
-  if(pct >= 30) return "rgb(220,38,38)";
+  if(pct >= 100) return "rgb(220,38,38)";
   let lo = PCT_COLOR_STOPS[0], hi = PCT_COLOR_STOPS[PCT_COLOR_STOPS.length-1];
   for(let i=0;i<PCT_COLOR_STOPS.length-1;i++){
     if(pct >= PCT_COLOR_STOPS[i].p && pct <= PCT_COLOR_STOPS[i+1].p){
@@ -1103,8 +1103,23 @@ function showChartTooltip(evt, text){
   const el = ensureChartTooltip();
   el.textContent = text;
   el.style.display = "block";
-  el.style.left = (evt.pageX + 12) + "px";
-  el.style.top = (evt.pageY - 28) + "px";
+
+  const margin = 8;
+  const rect = el.getBoundingClientRect(); // bredde/højde af tooltip'en med den aktuelle tekst
+  const viewportW = document.documentElement.clientWidth;
+  const viewportH = document.documentElement.clientHeight;
+
+  // Vis til højre for pegepunktet som udgangspunkt, men skift til venstre
+  // hvis der ikke er plads, så den aldrig løber ud over skærmkanten.
+  let left = evt.clientX + 12;
+  if(left + rect.width + margin > viewportW) left = evt.clientX - rect.width - 12;
+  left = Math.max(margin, Math.min(left, viewportW - rect.width - margin));
+
+  let top = evt.clientY - 28;
+  top = Math.max(margin, Math.min(top, viewportH - rect.height - margin));
+
+  el.style.left = (left + window.scrollX) + "px";
+  el.style.top = (top + window.scrollY) + "px";
 }
 function hideChartTooltip(){
   const el = document.getElementById("chartTooltip");
