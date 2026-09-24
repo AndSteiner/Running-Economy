@@ -96,7 +96,7 @@
   tbody tr{border-bottom:1px solid var(--border);}
   tbody tr:last-child{border-bottom:none;}
   tbody tr.today-row{background:color-mix(in srgb, var(--accent) 10%, transparent);}
-  input[type=text]{
+  input[type=text], input[type=date], select{
     background:var(--card-2);
     border:1px solid var(--border);
     color:var(--text);
@@ -105,8 +105,16 @@
     font-size:.85rem;
     width:100%;
   }
-  input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  input:focus, select:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .empty-state{color:var(--muted);font-size:.85rem;padding:14px 0;text-align:center;}
+  .page-order-list{display:flex;flex-direction:column;gap:8px;}
+  .page-order-item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--card-2);border:1px solid var(--border);border-radius:8px;
+    padding:8px 12px;font-size:.85rem;
+  }
+  .page-order-item .order-buttons{display:flex;gap:4px;}
+  .page-order-item button:disabled{opacity:.3;cursor:default;}
   .pill{
     display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600;
   }
@@ -189,10 +197,10 @@
   <div class="page-nav">
     <button class="page-arrow" id="prevPageBtn" aria-label="Forrige side">‹</button>
     <div class="page-dots" id="pageDots">
-      <button class="dot active" data-page="0"></button>
-      <button class="dot" data-page="1"></button>
-      <button class="dot" data-page="2"></button>
-      <button class="dot" data-page="3"></button>
+      <button class="dot active" data-page="0" data-key="log"></button>
+      <button class="dot" data-page="1" data-key="tools"></button>
+      <button class="dot" data-page="2" data-key="settings"></button>
+      <button class="dot" data-page="3" data-key="charts"></button>
     </div>
     <button class="page-arrow" id="nextPageBtn" aria-label="Næste side">›</button>
   </div>
@@ -202,7 +210,7 @@
 <div class="pager" id="pager">
 
   <!-- ================= SIDE 1: LOG ================= -->
-  <section class="page" data-page="0">
+  <section class="page" data-page="0" data-key="log">
     <div class="wrap">
       <div class="card">
         <h2>📅 <span data-i18n="log_heading"></span></h2>
@@ -269,7 +277,7 @@
   </section>
 
   <!-- ================= SIDE 2: VÆRKTØJER ================= -->
-  <section class="page" data-page="1">
+  <section class="page" data-page="1" data-key="tools">
     <div class="wrap">
       <div class="card">
         <h2>⏱️ <span data-i18n="pace_heading"></span></h2>
@@ -327,7 +335,7 @@
   </section>
 
   <!-- ================= SIDE 3: INDSTILLINGER ================= -->
-  <section class="page" data-page="2">
+  <section class="page" data-page="2" data-key="settings">
     <div class="wrap">
       <div class="card">
         <h2>🔗 <span data-i18n="strava_heading"></span></h2>
@@ -369,12 +377,52 @@
         </div>
       </div>
 
+      <div class="card">
+        <h2>↕️ <span data-i18n="page_order_heading"></span></h2>
+        <p class="sub" data-i18n="page_order_sub"></p>
+        <div id="pageOrderList" class="page-order-list"></div>
+      </div>
+
+      <div class="card">
+        <h2>📅 <span data-i18n="log_settings_heading"></span></h2>
+        <p class="sub" data-i18n="log_settings_sub"></p>
+        <div class="field">
+          <label for="logWeeksLimit" data-i18n="log_weeks_limit_label"></label>
+          <select id="logWeeksLimit">
+            <option value="4">4</option>
+            <option value="8">8</option>
+            <option value="12">12</option>
+            <option value="26">26</option>
+            <option value="52">52</option>
+            <option value="all" data-i18n="log_weeks_limit_all"></option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📈 <span data-i18n="chart_settings_heading"></span></h2>
+        <p class="sub" data-i18n="chart_settings_sub"></p>
+        <div class="grid-2">
+          <div class="field">
+            <label for="chartFromDate" data-i18n="chart_from_label"></label>
+            <input type="date" id="chartFromDate">
+          </div>
+          <div class="field">
+            <label for="chartToDate" data-i18n="chart_to_label"></label>
+            <input type="date" id="chartToDate">
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="btn secondary small" id="chartRangeResetBtn" data-i18n="chart_range_reset"></button>
+        </div>
+      </div>
+
       <footer data-i18n="footer_text"></footer>
     </div>
   </section>
 
   <!-- ================= SIDE 4: GRAFER ================= -->
-  <section class="page" data-page="3">
+  <section class="page" data-page="3" data-key="charts">
     <div class="wrap">
       <div class="card">
         <h2>📈 <span data-i18n="chart_weekly_heading"></span></h2>
@@ -401,6 +449,17 @@ const KM_PER_MILE = 1.609344;
 const STORAGE_KEY = "lobeokonomi-data-v1";
 const LANG_KEY = "lobeokonomi-lang";
 const THEME_KEY = "lobeokonomi-theme";
+const LOG_WEEKS_LIMIT_KEY = "lobeokonomi-log-weeks-limit";
+const CHART_RANGE_KEY = "lobeokonomi-chart-range";
+
+let logWeeksLimit = localStorage.getItem(LOG_WEEKS_LIMIT_KEY) || "12";
+let chartRange = (() => {
+  try{
+    const saved = JSON.parse(localStorage.getItem(CHART_RANGE_KEY));
+    if(saved && typeof saved === "object") return {from: saved.from || null, to: saved.to || null};
+  }catch(e){}
+  return {from: null, to: null};
+})();
 
 // --- Strava-integration: se worker/strava-worker.js ---
 const STRAVA_CLIENT_ID = "280932";
@@ -409,7 +468,7 @@ const STRAVA_WORKER_URL = "https://running-economy.andreas-m-steiner.workers.dev
 /* ---------- i18n ---------- */
 const STRINGS = {
   da: {
-    page0: "Log", page1: "Værktøjer", page2: "Indstillinger", page3: "Grafer",
+    page_log: "Log", page_tools: "Værktøjer", page_settings: "Indstillinger", page_charts: "Grafer",
     log_heading: "Ugentlig log",
     log_sub: "Automatisk opsummering pr. uge ud fra dine Strava-løbeture. Stigning og 10%-grænse beregnes ud fra ugen før.",
     log_col_week: "Uge", log_col_start: "Start dato", log_col_end: "Slut dato",
@@ -474,10 +533,15 @@ const STRINGS = {
     charts_empty: "Ingen data endnu — forbind Strava under Indstillinger.",
     chart_week_tooltip: "Uge {week}: {val} km",
     chart_date_tooltip: "{date}: {val} km i alt",
+    page_order_heading: "Rækkefølge på sider", page_order_sub: "Bestem hvilken rækkefølge de fire sider skal vises i.",
+    log_settings_heading: "Ugentlig log", log_settings_sub: "Vælg hvor mange af de seneste uger loggen skal vise.",
+    log_weeks_limit_label: "Antal uger vist", log_weeks_limit_all: "Alle",
+    chart_settings_heading: "Grafer", chart_settings_sub: "Begræns hvilke uger graferne viser. Lad stå tomt for at se alt.",
+    chart_from_label: "Fra uge (dato)", chart_to_label: "Til uge (dato)", chart_range_reset: "Nulstil periode",
     footer_text: "Alle data gemmes lokalt i din browser (localStorage) — intet sendes til nettet."
   },
   en: {
-    page0: "Log", page1: "Tools", page2: "Settings", page3: "Charts",
+    page_log: "Log", page_tools: "Tools", page_settings: "Settings", page_charts: "Charts",
     log_heading: "Weekly Log",
     log_sub: "Automatic weekly summary based on your Strava runs. Increase and the 10% limit are calculated from the previous week.",
     log_col_week: "Week", log_col_start: "Start date", log_col_end: "End date",
@@ -542,6 +606,11 @@ const STRINGS = {
     charts_empty: "No data yet — connect Strava under Settings.",
     chart_week_tooltip: "Week {week}: {val} km",
     chart_date_tooltip: "{date}: {val} km total",
+    page_order_heading: "Page order", page_order_sub: "Choose which order the four pages are shown in.",
+    log_settings_heading: "Weekly Log", log_settings_sub: "Choose how many of the most recent weeks the log should show.",
+    log_weeks_limit_label: "Number of weeks shown", log_weeks_limit_all: "All",
+    chart_settings_heading: "Charts", chart_settings_sub: "Limit which weeks the charts show. Leave empty to see everything.",
+    chart_from_label: "From week (date)", chart_to_label: "To week (date)", chart_range_reset: "Reset range",
     footer_text: "All data is stored locally in your browser (localStorage) — nothing is sent to the internet."
   }
 };
@@ -566,7 +635,8 @@ function applyStaticTranslations(){
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
-  document.getElementById("pageLabel").textContent = t(`page${currentPageIndex()}`);
+  updatePageChrome();
+  renderPageOrderList();
   document.getElementById("langDaBtn").classList.toggle("active", lang === "da");
   document.getElementById("langEnBtn").classList.toggle("active", lang === "en");
 }
@@ -728,6 +798,15 @@ function getWeekRange(){
   return range;
 }
 
+// Uger til grafernes visning: samme sammenhængende rækkefølge, men begrænset
+// til den periode brugeren har valgt under Indstillinger.
+function getChartWeekRange(){
+  let range = getWeekRange();
+  if(chartRange.from) range = range.filter(k => k >= chartRange.from);
+  if(chartRange.to) range = range.filter(k => k <= chartRange.to);
+  return range;
+}
+
 function renderLog(){
   const body = document.getElementById("logBody");
   body.innerHTML = "";
@@ -742,9 +821,11 @@ function renderLog(){
   }
 
   const values = range.map(k => weekTripsTotal(k) ?? 0);
+  const limit = logWeeksLimit === "all" ? range.length : Math.min(parseInt(logWeeksLimit, 10), range.length);
+  const startIdx = range.length - limit;
 
-  // Nyeste uge øverst
-  for(let i = range.length - 1; i >= 0; i--){
+  // Nyeste uge øverst, begrænset til de seneste `limit` uger
+  for(let i = range.length - 1; i >= startIdx; i--){
     const weekStart = range[i];
     const actual = values[i];
     const prevActual = i > 0 ? values[i-1] : null;
@@ -922,7 +1003,7 @@ function hideChartTooltip(){
 function renderWeeklyChart(){
   const container = document.getElementById("weeklyChart");
   if(!container) return;
-  const range = getWeekRange();
+  const range = getChartWeekRange();
   if(range.length === 0){
     container.innerHTML = `<div class="empty-state">${t("charts_empty")}</div>`;
     return;
@@ -982,7 +1063,7 @@ function renderWeeklyChart(){
 function renderCumulativeChart(){
   const container = document.getElementById("cumulativeChart");
   if(!container) return;
-  const range = getWeekRange();
+  const range = getChartWeekRange();
   if(range.length === 0){
     container.innerHTML = `<div class="empty-state">${t("charts_empty")}</div>`;
     return;
@@ -1353,36 +1434,104 @@ document.getElementById("importFile").addEventListener("change", e => {
   e.target.value = "";
 });
 
-/* ---------- Sidenavigation (swipe) ---------- */
+/* ---------- Sidenavigation (swipe + tilpasset rækkefølge) ---------- */
 const pager = document.getElementById("pager");
-const dots = [...document.querySelectorAll(".dot")];
+const PAGE_ORDER_KEY = "lobeokonomi-page-order";
+const DEFAULT_PAGE_ORDER = ["log","tools","settings","charts"];
+let pageOrder = (() => {
+  try{
+    const saved = JSON.parse(localStorage.getItem(PAGE_ORDER_KEY));
+    if(Array.isArray(saved) && saved.length === DEFAULT_PAGE_ORDER.length && DEFAULT_PAGE_ORDER.every(k => saved.includes(k))){
+      return saved;
+    }
+  }catch(e){}
+  return DEFAULT_PAGE_ORDER.slice();
+})();
+
+function getPages(){ return [...document.querySelectorAll(".page")]; }
+function getDots(){ return [...document.querySelectorAll(".dot")]; }
+
+// Flytter de fysiske DOM-elementer så de matcher pageOrder, og genberegner
+// data-page-indeks på både sider og prikker.
+function applyPageOrder(){
+  const pagesByKey = {};
+  document.querySelectorAll(".page").forEach(p => pagesByKey[p.dataset.key] = p);
+  const dotsByKey = {};
+  document.querySelectorAll(".dot").forEach(d => dotsByKey[d.dataset.key] = d);
+  const dotsContainer = document.getElementById("pageDots");
+  pageOrder.forEach((key, i) => {
+    const pageEl = pagesByKey[key];
+    const dotEl = dotsByKey[key];
+    if(!pageEl || !dotEl) return;
+    pageEl.dataset.page = i;
+    dotEl.dataset.page = i;
+    pager.appendChild(pageEl);
+    dotsContainer.appendChild(dotEl);
+  });
+}
+
 function currentPageIndex(){
   if(!pager.clientWidth) return 0;
   return Math.round(pager.scrollLeft / pager.clientWidth);
 }
+function updatePageChromeFor(i){
+  getDots().forEach((d, idx) => d.classList.toggle("active", idx === i));
+  const pages = getPages();
+  const key = pages[i] ? pages[i].dataset.key : pageOrder[0];
+  document.getElementById("pageLabel").textContent = t("page_" + key);
+}
 function goToPage(i){
   pager.scrollTo({left: i * pager.clientWidth, behavior: "smooth"});
-  // Opdatér prikker/label med det samme frem for udelukkende at vente på scroll-eventet
-  dots.forEach((d, idx) => d.classList.toggle("active", idx === i));
-  document.getElementById("pageLabel").textContent = t(`page${i}`);
+  updatePageChromeFor(i); // opdatér med det samme frem for udelukkende at vente på scroll-eventet
 }
 function updatePageChrome(){
-  const i = currentPageIndex();
-  dots.forEach((d, idx) => d.classList.toggle("active", idx === i));
-  document.getElementById("pageLabel").textContent = t(`page${i}`);
+  updatePageChromeFor(currentPageIndex());
 }
 document.getElementById("prevPageBtn").addEventListener("click", () => {
   goToPage(Math.max(0, currentPageIndex() - 1));
 });
 document.getElementById("nextPageBtn").addEventListener("click", () => {
-  goToPage(Math.min(dots.length - 1, currentPageIndex() + 1));
+  goToPage(Math.min(getPages().length - 1, currentPageIndex() + 1));
 });
-dots.forEach((d, i) => d.addEventListener("click", () => goToPage(i)));
+document.querySelectorAll(".dot").forEach(d => {
+  d.addEventListener("click", () => goToPage(parseInt(d.dataset.page)));
+});
 let pagerScrollTimeout;
 pager.addEventListener("scroll", () => {
   clearTimeout(pagerScrollTimeout);
   pagerScrollTimeout = setTimeout(updatePageChrome, 60);
 });
+
+function renderPageOrderList(){
+  const container = document.getElementById("pageOrderList");
+  if(!container) return;
+  container.innerHTML = "";
+  pageOrder.forEach((key, i) => {
+    const row = document.createElement("div");
+    row.className = "page-order-item";
+    row.innerHTML = `
+      <span>${i+1}. ${t("page_" + key)}</span>
+      <div class="order-buttons">
+        <button class="icon-btn" data-move="up" data-key="${key}" ${i===0 ? "disabled" : ""} title="↑">↑</button>
+        <button class="icon-btn" data-move="down" data-key="${key}" ${i===pageOrder.length-1 ? "disabled" : ""} title="↓">↓</button>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+  container.querySelectorAll("[data-move]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.key;
+      const idx = pageOrder.indexOf(key);
+      const swapIdx = btn.dataset.move === "up" ? idx - 1 : idx + 1;
+      if(swapIdx < 0 || swapIdx >= pageOrder.length) return;
+      [pageOrder[idx], pageOrder[swapIdx]] = [pageOrder[swapIdx], pageOrder[idx]];
+      localStorage.setItem(PAGE_ORDER_KEY, JSON.stringify(pageOrder));
+      applyPageOrder();
+      renderPageOrderList();
+      goToPage(0);
+    });
+  });
+}
 
 /* ---------- Sprog/tema-knapper ---------- */
 document.getElementById("langDaBtn").addEventListener("click", () => setLang("da"));
@@ -1390,15 +1539,51 @@ document.getElementById("langEnBtn").addEventListener("click", () => setLang("en
 document.getElementById("themeLightBtn").addEventListener("click", () => setTheme("light"));
 document.getElementById("themeDarkBtn").addEventListener("click", () => setTheme("dark"));
 
+/* ---------- Log-/graf-indstillinger ---------- */
+function renderSettingsInputs(){
+  const logSelect = document.getElementById("logWeeksLimit");
+  if(logSelect) logSelect.value = logWeeksLimit;
+
+  const range = getWeekRange();
+  const fromField = document.getElementById("chartFromDate");
+  const toField = document.getElementById("chartToDate");
+  if(fromField) fromField.value = chartRange.from || (range[0] || "");
+  if(toField) toField.value = chartRange.to || (range[range.length-1] || CURRENT_WEEK_START);
+}
+
+document.getElementById("logWeeksLimit").addEventListener("change", e => {
+  logWeeksLimit = e.target.value;
+  localStorage.setItem(LOG_WEEKS_LIMIT_KEY, logWeeksLimit);
+  renderLog();
+});
+document.getElementById("chartFromDate").addEventListener("change", e => {
+  chartRange.from = e.target.value ? toMonday(e.target.value) : null;
+  localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
+  renderCharts();
+});
+document.getElementById("chartToDate").addEventListener("change", e => {
+  chartRange.to = e.target.value ? toMonday(e.target.value) : null;
+  localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
+  renderCharts();
+});
+document.getElementById("chartRangeResetBtn").addEventListener("click", () => {
+  chartRange = {from: null, to: null};
+  localStorage.setItem(CHART_RANGE_KEY, JSON.stringify(chartRange));
+  renderSettingsInputs();
+  renderCharts();
+});
+
 /* ---------- init ---------- */
 function renderAll(){
   renderLog();
   renderTrips();
   renderCharts();
+  renderSettingsInputs();
 }
 
 document.documentElement.lang = lang;
 applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+applyPageOrder();
 applyStaticTranslations();
 renderAll();
 renderStravaStatus();
