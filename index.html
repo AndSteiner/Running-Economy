@@ -418,6 +418,7 @@
       </div>
 
       <footer data-i18n="footer_text"></footer>
+      <footer id="versionFooter" style="margin-top:4px;"></footer>
     </div>
   </section>
 
@@ -507,6 +508,9 @@
 </div>
 
 <script>
+// Bump denne ved hver ændring, der pushes - vises i Indstillinger, så det er
+// nemt at se om en telefon rent faktisk har hentet den nyeste version.
+const APP_VERSION = "2026-09-24.1";
 const KM_PER_MILE = 1.609344;
 const STORAGE_KEY = "lobeokonomi-data-v1";
 const LANG_KEY = "lobeokonomi-lang";
@@ -1826,6 +1830,7 @@ applyPageOrder();
 applyStaticTranslations();
 renderAll();
 renderStravaStatus();
+document.getElementById("versionFooter").textContent = `Version ${APP_VERSION}`;
 
 // Synkroniser automatisk med Strava, når appen åbnes (højst hvert 15. minut,
 // for ikke at overbelaste Strava-API'et) - i stedet for kun ved manuelt tryk.
